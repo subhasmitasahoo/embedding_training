@@ -1710,20 +1710,45 @@ with top_k hard negs:    hn  = bmm(A, HN.T)        →  [B, k]
 - `bmm` computes each anchor's similarity against only its *own* k hard negatives (no cross-contamination between anchors)
 - The correct class label is still the diagonal — the model must rank column `i` highest in row `i`, and rank all k appended hard neg columns lower
 
+### Dynamic pairing
+
+Previously pairs were created **once** before training and the same combinations
+were reused every epoch — the model saw the same anchor/positive pairs all 15 epochs:
+
+```
+Epoch 1:  anchor="where is my order"     positive="track my package"
+Epoch 15: anchor="where is my order"     positive="track my package"  ← identical
+```
+
+With dynamic pairing, pairs are **re-shuffled at the start of each epoch**,
+drawing different combinations from the same query pool each time:
+
+```
+Epoch 1:  anchor="where is my order"     positive="track my package"
+Epoch 2:  anchor="has my order shipped"  positive="where is my parcel"   ← fresh
+Epoch 3:  anchor="I need to track this"  positive="delivery status?"     ← fresh
+```
+
+With 50 queries per intent, there are 50×49/2 = 1,225 possible pairs per intent.
+Static pairing uses 25 of them repeatedly. Dynamic pairing exposes the model to
+a much wider variety across 15 epochs without needing more data.
+
+Enabled by default (`--static-pairing` flag restores the old behaviour).
+
 ### Running experiments
 
 ```bash
 cd customer_intent_search
 
 # single run with hard negatives (top_k=1, mining starts epoch 4, refreshes every 3)
-python train.py --hard-negatives --hn-top-k 1 --epochs 20 \
-    --output-dir ../models/finetuned_hn
+python train.py --hard-negatives --hn-top-k 1 --output-dir ../models/finetuned_hn
 
-# compare top_k = 0 (baseline), 1, 3, 5 — saves plots to results/hn_experiments/
-python train.py --hn-experiments --epochs 20 --results-dir ../results
+# full 2×4 grid — static and dynamic pairing, top_k = 0/1/3/5
+python train.py --hn-experiments --static-pairing --exp-version v2  # static
+python train.py --hn-experiments --exp-version v2                   # dynamic
 ```
 
-**All hard negative flags:**
+**All flags:**
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -1732,30 +1757,66 @@ python train.py --hn-experiments --epochs 20 --results-dir ../results
 | `--hn-start-epoch` | 4 | Epoch to begin mining (warm-up first) |
 | `--hn-refresh-every` | 3 | Re-mine every N epochs |
 | `--hn-experiments` | off | Run full top_k comparison sweep |
+| `--static-pairing` | off | Use same pairs every epoch (default: re-shuffle) |
+| `--exp-version` | v1 | Version tag — results saved under `v<N>/static/` or `v<N>/dynamic/` |
 
-### Results
+### Results — v2 full 2×4 grid (CLINC-150, 15 epochs, temp=0.05, pairs_per_intent=25)
 
-The CLINC-150 training log showed a plateau at ~59% val accuracy that hard negatives are designed to break:
+All metrics at the final epoch. Best Val Acc shows the peak reached during training.
+
+| Config | Dynamic Pairing | Best Val Acc | Best Epoch | Train Loss | Train Acc | Val Loss | Val Acc | Gap |
+|--------|:--------------:|:------------:|:----------:|:----------:|:---------:|:--------:|:-------:|:---:|
+| no_hn  | ✗ | 65.0% | 14 | 0.384 | 89.8% | 1.810 | 64.9% | 1.426 ⚠ |
+| hn_k=1 | ✗ | 64.9% | 15 | 0.527 | 89.0% | 1.793 | 64.9% | 1.266 ⚠ |
+| hn_k=3 | ✗ | 65.6% | 15 | 0.628 | 90.7% | 1.796 | 65.6% | 1.168 ⚠ |
+| hn_k=5 | ✗ | 65.3% | 15 | 0.717 | 89.3% | 1.831 | 65.3% | 1.114 ⚠ |
+| no_hn  | ✓ | 69.6% | 15 | 0.756 | 76.0% | 1.387 | 69.6% | 0.631 ⚠ |
+| hn_k=1 | ✓ | 69.8% | 15 | 0.981 | 77.5% | 1.367 | 69.8% | 0.387 ✓ |
+| hn_k=3 | ✓ | 69.5% | 15 | 1.139 | 79.3% | 1.358 | 69.5% | 0.219 ✓ |
+| **hn_k=5** | **✓** | **70.5%** | **14** | **1.233** | **80.2%** | **1.375** | **70.3%** | **0.141 ✓** |
+
+**Comparison charts:** `results/hn_experiments/v2/static/hn_comparison.png` and `results/hn_experiments/v2/dynamic/hn_comparison.png`
+
+#### Key findings from the 2×4 grid
+
+**Finding 1 — Dynamic pairing is the bigger lever (+4.6pp)**
+
+Static no_hn (65.0%) → Dynamic no_hn (69.6%) = **+4.6pp** just from re-shuffling pairs
+each epoch. The model sees more unique query combinations and generalises better.
+Note: train accuracy is much higher under static (89.8% vs 76.0%) — the model is
+memorising the same fixed pairs instead of learning robust representations.
+
+**Finding 2 — Hard negatives barely help without dynamic pairing**
+
+Under static pairing, HN mining improves val accuracy by just 0–0.6pp
+(65.0% → 65.6% at best) and all four runs still overfit badly (gap > 1.0).
+The model is already memorising static pairs — hard negatives can't overcome that.
+
+**Finding 3 — Hard negatives shine on top of dynamic pairing**
+
+Under dynamic pairing, hard negatives reduce the overfitting gap dramatically
+(0.631 → 0.141) while also lifting accuracy slightly (69.6% → 70.5%). The two
+techniques are **synergistic**: dynamic pairing provides training variety,
+hard negatives sharpen the intent boundaries on top of that foundation.
+
+**Finding 4 — Why gap and val accuracy tell different stories**
+
+Val accuracy and val loss are two different signals:
+- **Val accuracy** — binary per query (is rank-1 correct?). Coarse. Saturates easily.
+- **Val loss** — continuous cross-entropy. Sensitive to model confidence across the full similarity matrix.
+
+Hard negatives keep train_loss higher because training is harder — the model
+cannot memorise pairs as easily. Val loss stays roughly flat. The gap shrinks
+not because val improved, but because train didn't drop as far:
 
 ```
-Standard training (no HN):
-  Epoch 08 | val_acc 52.9%
-  Epoch 10 | val_acc 55.3%   ← plateau starts
-  Epoch 15 | val_acc 59.4%   ← final (flat for 5 epochs)
+static no_hn : train=0.384  val=1.810  gap=1.426  ← model memorised training pairs
+dynamic no_hn: train=0.756  val=1.387  gap=0.631  ← better generalisation
+dynamic hn_k5: train=1.233  val=1.375  gap=0.141  ← healthiest — forced to generalise
 ```
 
-Run the experiments and fill in the table below:
-
-| Config | Best Val Acc | Best Epoch | Final Val Loss |
-|--------|-------------|------------|----------------|
-| No HN (baseline) | 59.5% | 14 | 2.04 |
-| top_k=1 | — | — | — |
-| top_k=3 | — | — | — |
-| top_k=5 | — | — | — |
-
-**Comparison chart:** `results/hn_experiments/hn_comparison.png`
-
-**Comparison chart:** `results/hn_experiments/hn_comparison.png`
+A low gap means the model's training behaviour matches its test behaviour —
+the best indicator that it will generalise to new queries it has never seen.
 
 ---
 

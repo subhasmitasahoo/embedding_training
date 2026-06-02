@@ -1,0 +1,245 @@
+/Users/subha/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:198: RuntimeWarning: divide by zero encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:198: RuntimeWarning: overflow encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:198: RuntimeWarning: invalid value encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+
+  Version    : v2
+  Pairing    : static
+  Models  →  ../models/hn_experiments/v2/static
+  Results →  ../results/hn_experiments/v2/static
+
+=================================================================
+  HN EXPERIMENT: no_hn  (top_k=0)
+=================================================================
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (static — same pairs every epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0568 | train_acc 3.1% | val_loss 4.6372 | val_acc 15.3% | time 2.5s
+  Epoch 02 | train_loss 4.7198 | train_acc 5.4% | val_loss 3.9661 | val_acc 21.4% | time 2.5s
+  Epoch 03 | train_loss 3.9009 | train_acc 14.3% | val_loss 3.0236 | val_acc 34.4% | time 2.5s
+  Epoch 04 | train_loss 2.9532 | train_acc 29.2% | val_loss 2.5181 | val_acc 45.1% | time 2.5s
+  Epoch 05 | train_loss 2.1708 | train_acc 44.1% | val_loss 2.2150 | val_acc 51.0% | time 2.5s
+  Epoch 06 | train_loss 1.6643 | train_acc 54.5% | val_loss 2.0675 | val_acc 55.0% | time 2.5s
+  Epoch 07 | train_loss 1.2880 | train_acc 63.5% | val_loss 1.9976 | val_acc 56.9% | time 2.5s
+  Epoch 08 | train_loss 1.0387 | train_acc 69.7% | val_loss 1.9504 | val_acc 58.7% | time 2.5s
+  Epoch 09 | train_loss 0.8380 | train_acc 75.0% | val_loss 1.8933 | val_acc 60.7% | time 2.5s ⚠ overfit?
+  Epoch 10 | train_loss 0.7166 | train_acc 79.1% | val_loss 1.8732 | val_acc 61.8% | time 2.5s ⚠ overfit?
+  Epoch 11 | train_loss 0.5931 | train_acc 82.8% | val_loss 1.8517 | val_acc 62.9% | time 2.5s ⚠ overfit?
+  Epoch 12 | train_loss 0.5133 | train_acc 85.5% | val_loss 1.8302 | val_acc 63.9% | time 2.5s ⚠ overfit?
+  Epoch 13 | train_loss 0.4612 | train_acc 87.4% | val_loss 1.8146 | val_acc 64.4% | time 2.5s ⚠ overfit?
+  Epoch 14 | train_loss 0.4199 | train_acc 88.5% | val_loss 1.8156 | val_acc 65.0% | time 2.5s ⚠ overfit?
+  Epoch 15 | train_loss 0.3840 | train_acc 89.8% | val_loss 1.8103 | val_acc 64.9% | time 2.6s ⚠ overfit?
+
+  Best val accuracy : 65.0% at epoch 14
+  Final loss gap    : 1.4262 (⚠ overfitting)
+  Plot      → ../results/hn_experiments/v2/static/no_hn/training_curves_no_hn.png
+
+  Model     → ../models/hn_experiments/v2/static/no_hn/model.pt
+  Tokenizer → ../models/hn_experiments/v2/static/no_hn/tokenizer.json
+  Config    → ../models/hn_experiments/v2/static/no_hn/config.json
+
+=================================================================
+  HN EXPERIMENT: hn_k=1  (top_k=1)
+=================================================================
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (static — same pairs every epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Hard negatives: top_k=1, start_epoch=4, refresh_every=3
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0568 | train_acc 3.1% | val_loss 4.6372 | val_acc 15.3% | time 2.4s
+  Epoch 02 | train_loss 4.7198 | train_acc 5.4% | val_loss 3.9661 | val_acc 21.4% | time 2.4s
+  Epoch 03 | train_loss 3.9009 | train_acc 14.3% | val_loss 3.0236 | val_acc 34.4% | time 2.4s
+  [HN] Mining hard negatives (top_k=1)...
+  Epoch 04 | train_loss 3.0446 | train_acc 29.1% | val_loss 2.5095 | val_acc 43.7% | time 3.7s
+  Epoch 05 | train_loss 2.3162 | train_acc 43.3% | val_loss 2.2231 | val_acc 49.7% | time 3.7s
+  Epoch 06 | train_loss 1.7947 | train_acc 54.4% | val_loss 2.0558 | val_acc 54.6% | time 3.7s
+  [HN] Mining hard negatives (top_k=1)...
+  Epoch 07 | train_loss 1.4740 | train_acc 65.1% | val_loss 1.9481 | val_acc 57.1% | time 3.6s
+  Epoch 08 | train_loss 1.2283 | train_acc 71.2% | val_loss 1.8926 | val_acc 59.3% | time 3.6s
+  Epoch 09 | train_loss 1.0206 | train_acc 75.6% | val_loss 1.8422 | val_acc 61.0% | time 3.7s
+  [HN] Mining hard negatives (top_k=1)...
+  Epoch 10 | train_loss 0.8759 | train_acc 80.6% | val_loss 1.8046 | val_acc 63.3% | time 3.7s
+  Epoch 11 | train_loss 0.7508 | train_acc 83.4% | val_loss 1.8121 | val_acc 63.4% | time 3.6s ⚠ overfit?
+  Epoch 12 | train_loss 0.6620 | train_acc 85.9% | val_loss 1.8072 | val_acc 63.9% | time 3.7s ⚠ overfit?
+  [HN] Mining hard negatives (top_k=1)...
+  Epoch 13 | train_loss 0.6211 | train_acc 87.7% | val_loss 1.8015 | val_acc 64.9% | time 3.6s ⚠ overfit?
+  Epoch 14 | train_loss 0.5655 | train_acc 88.8% | val_loss 1.7956 | val_acc 64.8% | time 3.6s ⚠ overfit?
+  Epoch 15 | train_loss 0.5274 | train_acc 89.0% | val_loss 1.7930 | val_acc 64.9% | time 3.6s ⚠ overfit?
+
+  Best val accuracy : 64.9% at epoch 15
+  Final loss gap    : 1.2657 (⚠ overfitting)
+  Plot      → ../results/hn_experiments/v2/static/hn_k_1/training_curves_hn_k=1.png
+
+  Model     → ../models/hn_experiments/v2/static/hn_k_1/model.pt
+  Tokenizer → ../models/hn_experiments/v2/static/hn_k_1/tokenizer.json
+  Config    → ../models/hn_experiments/v2/static/hn_k_1/config.json
+
+=================================================================
+  HN EXPERIMENT: hn_k=3  (top_k=3)
+=================================================================
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (static — same pairs every epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Hard negatives: top_k=3, start_epoch=4, refresh_every=3
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0568 | train_acc 3.1% | val_loss 4.6372 | val_acc 15.3% | time 2.3s
+  Epoch 02 | train_loss 4.7198 | train_acc 5.4% | val_loss 3.9661 | val_acc 21.4% | time 2.3s
+  Epoch 03 | train_loss 3.9009 | train_acc 14.3% | val_loss 3.0236 | val_acc 34.4% | time 2.3s
+  [HN] Mining hard negatives (top_k=3)...
+  Epoch 04 | train_loss 3.1811 | train_acc 29.2% | val_loss 2.4628 | val_acc 44.8% | time 6.1s
+  Epoch 05 | train_loss 2.4685 | train_acc 43.8% | val_loss 2.1638 | val_acc 51.7% | time 6.1s
+  Epoch 06 | train_loss 1.9672 | train_acc 54.4% | val_loss 2.0013 | val_acc 55.9% | time 6.1s
+  [HN] Mining hard negatives (top_k=3)...
+  Epoch 07 | train_loss 1.7363 | train_acc 63.6% | val_loss 1.8894 | val_acc 58.5% | time 6.1s
+  Epoch 08 | train_loss 1.3968 | train_acc 71.9% | val_loss 1.8601 | val_acc 60.5% | time 6.1s
+  Epoch 09 | train_loss 1.1601 | train_acc 77.7% | val_loss 1.8410 | val_acc 61.1% | time 6.1s
+  [HN] Mining hard negatives (top_k=3)...
+  Epoch 10 | train_loss 1.0633 | train_acc 80.6% | val_loss 1.7952 | val_acc 62.7% | time 6.1s
+  Epoch 11 | train_loss 0.9225 | train_acc 83.9% | val_loss 1.7839 | val_acc 63.9% | time 6.1s
+  Epoch 12 | train_loss 0.7755 | train_acc 85.9% | val_loss 1.7870 | val_acc 64.4% | time 6.1s ⚠ overfit?
+  [HN] Mining hard negatives (top_k=3)...
+  Epoch 13 | train_loss 0.7134 | train_acc 88.2% | val_loss 1.7924 | val_acc 65.3% | time 6.1s ⚠ overfit?
+  Epoch 14 | train_loss 0.6828 | train_acc 88.3% | val_loss 1.7953 | val_acc 65.5% | time 6.1s ⚠ overfit?
+  Epoch 15 | train_loss 0.6280 | train_acc 90.7% | val_loss 1.7956 | val_acc 65.6% | time 6.1s ⚠ overfit?
+
+  Best val accuracy : 65.6% at epoch 15
+  Final loss gap    : 1.1676 (⚠ overfitting)
+  Plot      → ../results/hn_experiments/v2/static/hn_k_3/training_curves_hn_k=3.png
+
+  Model     → ../models/hn_experiments/v2/static/hn_k_3/model.pt
+  Tokenizer → ../models/hn_experiments/v2/static/hn_k_3/tokenizer.json
+  Config    → ../models/hn_experiments/v2/static/hn_k_3/config.json
+
+=================================================================
+  HN EXPERIMENT: hn_k=5  (top_k=5)
+=================================================================
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (static — same pairs every epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Hard negatives: top_k=5, start_epoch=4, refresh_every=3
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0568 | train_acc 3.1% | val_loss 4.6372 | val_acc 15.3% | time 2.3s
+  Epoch 02 | train_loss 4.7198 | train_acc 5.4% | val_loss 3.9661 | val_acc 21.4% | time 2.3s
+  Epoch 03 | train_loss 3.9009 | train_acc 14.3% | val_loss 3.0236 | val_acc 34.4% | time 2.3s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 04 | train_loss 3.2642 | train_acc 30.1% | val_loss 2.4804 | val_acc 44.9% | time 8.7s
+  Epoch 05 | train_loss 2.5973 | train_acc 42.9% | val_loss 2.1899 | val_acc 50.7% | time 8.8s
+  Epoch 06 | train_loss 2.0831 | train_acc 54.0% | val_loss 2.0132 | val_acc 55.4% | time 8.7s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 07 | train_loss 1.8855 | train_acc 64.0% | val_loss 1.9027 | val_acc 57.7% | time 8.9s
+  Epoch 08 | train_loss 1.5210 | train_acc 71.6% | val_loss 1.8905 | val_acc 58.8% | time 8.9s
+  Epoch 09 | train_loss 1.2896 | train_acc 76.6% | val_loss 1.8789 | val_acc 60.3% | time 8.8s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 10 | train_loss 1.1450 | train_acc 81.7% | val_loss 1.8355 | val_acc 62.5% | time 9.0s
+  Epoch 11 | train_loss 0.9852 | train_acc 83.8% | val_loss 1.8369 | val_acc 63.3% | time 9.0s
+  Epoch 12 | train_loss 0.8794 | train_acc 86.7% | val_loss 1.8246 | val_acc 63.7% | time 9.3s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 13 | train_loss 0.7855 | train_acc 88.5% | val_loss 1.8311 | val_acc 64.4% | time 8.9s ⚠ overfit?
+  Epoch 14 | train_loss 0.7451 | train_acc 89.1% | val_loss 1.8296 | val_acc 64.9% | time 8.8s ⚠ overfit?
+  Epoch 15 | train_loss 0.7174 | train_acc 89.3% | val_loss 1.8310 | val_acc 65.3% | time 8.8s ⚠ overfit?
+
+  Best val accuracy : 65.3% at epoch 15
+  Final loss gap    : 1.1135 (⚠ overfitting)
+  Plot      → ../results/hn_experiments/v2/static/hn_k_5/training_curves_hn_k=5.png
+
+  Model     → ../models/hn_experiments/v2/static/hn_k_5/model.pt
+  Tokenizer → ../models/hn_experiments/v2/static/hn_k_5/tokenizer.json
+  Config    → ../models/hn_experiments/v2/static/hn_k_5/config.json
+  HN comparison plot → ../results/hn_experiments/v2/static/hn_comparison.png
+
+=================================================================
+  HN EXPERIMENT SUMMARY  [v2]
+=================================================================
+  Config       | Best Val Acc | Best Epoch | Final Val Loss
+  ───────────────────────────────────────────────────────
+  no_hn (static) |        65.0% |         14 |         1.8103
+  hn_k=1 (static) |        64.9% |         15 |         1.7930
+  hn_k=3 (static) |        65.6% |         15 |         1.7956
+  hn_k=5 (static) |        65.3% |         15 |         1.8310
+
+  Summary → ../results/hn_experiments/v2/static/hn_summary.json

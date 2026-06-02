@@ -809,15 +809,15 @@ def train(args) -> tuple:
     model = model.to(device)
     print(f"  Parameters: {model.n_parameters():,}")
 
-    # ── Step 4: Dynamic pairing config ────────────────────────
-    # Pairs are re-created at the start of every epoch with a new random seed.
-    # This means queries are paired differently each epoch — the model sees
-    # (q7, q3) in epoch 1, (q7, q41) in epoch 2, (q7, q28) in epoch 3, etc.
-    # With 50 queries per intent and pairs_per_intent=25, every query appears
-    # in training. Static pairing would repeat the same 3,000 pairs every epoch.
+    # ── Step 4: Pairing mode ───────────────────────────────────
+    # Dynamic (default): pairs re-created every epoch with a new seed →
+    #     the model sees different anchor/positive combinations each epoch.
+    # Static (--static-pairing): same pairs every epoch → faster to overfit.
+    static_pairing = getattr(args, 'static_pairing', False)
+    pairing_label  = "static — same pairs every epoch" if static_pairing \
+                     else "dynamic — re-shuffled each epoch"
     batches_per_epoch = (args.pairs_per_intent * n_intents) // args.batch_size
-    print(f"\n  Pairs/epoch   : {args.pairs_per_intent * n_intents:,}  "
-          f"(dynamic — re-shuffled each epoch)")
+    print(f"\n  Pairs/epoch   : {args.pairs_per_intent * n_intents:,}  ({pairing_label})")
     print(f"  Batches/epoch : {batches_per_epoch}")
 
     # ── Step 5: Optimizer + scheduler + loss ───────────────────
@@ -846,12 +846,13 @@ def train(args) -> tuple:
 
     for epoch in range(1, args.epochs + 1):
 
-        # re-create pairs with a fresh shuffle each epoch (dynamic pairing)
-        # seed=args.seed + epoch gives a unique but reproducible shuffle per epoch
+        # pairing mode: static keeps seed fixed every epoch (same pairs each time)
+        #               dynamic uses seed+epoch (different pairs each epoch)
+        pair_seed = args.seed if static_pairing else args.seed + epoch
         pairs, intent_ids = create_training_pairs(
             train_data,
             pairs_per_intent=args.pairs_per_intent,
-            seed=args.seed + epoch,
+            seed=pair_seed,
             verbose=(epoch == 1),   # print once; suppress for remaining epochs
         )
         dataset = PairDataset(pairs, intent_ids)
@@ -1053,14 +1054,19 @@ def run_hn_experiments(base_args, results_dir: str, version: str = "v1"):
         {"label": "hn_k=5",  "top_k": 5, "color": "#2ecc71"},
     ]
 
-    # versioned roots — all output for this run lives under version/
+    # pairing mode label — embedded in paths so static and dynamic never collide
+    static_pairing = getattr(base_args, 'static_pairing', False)
+    pairing_tag    = "static" if static_pairing else "dynamic"
+
+    # versioned roots — all output lives under version/pairing_tag/
     repo_root    = os.path.dirname(results_dir)
-    models_root  = os.path.join(repo_root,   "models",  "hn_experiments", version)
-    plots_root   = os.path.join(results_dir, "hn_experiments", version)
+    models_root  = os.path.join(repo_root,   "models",  "hn_experiments", version, pairing_tag)
+    plots_root   = os.path.join(results_dir, "hn_experiments", version, pairing_tag)
     os.makedirs(models_root, exist_ok=True)
     os.makedirs(plots_root,  exist_ok=True)
 
     print(f"\n  Version    : {version}")
+    print(f"  Pairing    : {pairing_tag}")
     print(f"  Models  →  {models_root}")
     print(f"  Results →  {plots_root}")
 
@@ -1089,10 +1095,12 @@ def run_hn_experiments(base_args, results_dir: str, version: str = "v1"):
             saved = json.load(f)
 
         all_experiments.append({
-            "label":   cfg["label"],
-            "history": saved["history"],
-            "color":   cfg["color"],
-            "version": version,
+            "label":        f"{cfg['label']} ({pairing_tag})",
+            "history":      saved["history"],
+            "color":        cfg["color"],
+            "version":      version,
+            "pairing":      pairing_tag,
+            "hn_top_k":     cfg["top_k"],
         })
 
     # comparison plot → results/hn_experiments/<version>/hn_comparison.png
@@ -1154,6 +1162,9 @@ if __name__ == "__main__":
                         help="Version tag for experiment output dirs (default: v1). "
                              "Models → models/hn_experiments/<version>/<label>  "
                              "Plots  → results/hn_experiments/<version>/<label>")
+    parser.add_argument("--static-pairing", action="store_true",
+                        help="Use the same pairs every epoch instead of re-shuffling. "
+                             "Default: dynamic (re-shuffle each epoch).")
 
     # ── hard negative mining args ──────────────────────────────
     parser.add_argument("--hard-negatives",   action="store_true",
