@@ -1016,7 +1016,7 @@ def run_experiments(base_args, results_dir: str):
 
 # ── Hard Negative Experiment Runner ───────────────────────────────────────────
 
-def run_hn_experiments(base_args, results_dir: str):
+def run_hn_experiments(base_args, results_dir: str, version: str = "v1"):
     """
     Compare training with different hard negative top_k values:
         top_k=0 — no hard negatives (identical to standard training)
@@ -1029,9 +1029,21 @@ def run_hn_experiments(base_args, results_dir: str):
     Hard negatives are re-mined every hn_refresh_every epochs using current
     model weights, so the difficulty adapts as training progresses.
 
-    Saves individual training curves per config + one comparison plot at:
-        results/hn_experiments/hn_comparison.png
-        results/hn_experiments/hn_summary.json
+    Versioned output layout (example with version="v1"):
+        models/hn_experiments/v1/no_hn/     model.pt + tokenizer.json + config.json
+        models/hn_experiments/v1/hn_k_1/
+        models/hn_experiments/v1/hn_k_3/
+        models/hn_experiments/v1/hn_k_5/
+        results/hn_experiments/v1/no_hn/    training_curves_*.png
+        results/hn_experiments/v1/hn_k_1/
+        results/hn_experiments/v1/hn_comparison.png
+        results/hn_experiments/v1/hn_summary.json
+
+    Args:
+        base_args  : parsed argparse namespace (copied per experiment)
+        results_dir: base results directory (e.g. "../results")
+        version    : version tag — organises runs so old results are never overwritten
+                     Use "v0", "v1", "v2", ... to track experiment generations
     """
 
     hn_configs = [
@@ -1041,7 +1053,17 @@ def run_hn_experiments(base_args, results_dir: str):
         {"label": "hn_k=5",  "top_k": 5, "color": "#2ecc71"},
     ]
 
-    os.makedirs(results_dir, exist_ok=True)
+    # versioned roots — all output for this run lives under version/
+    repo_root    = os.path.dirname(results_dir)
+    models_root  = os.path.join(repo_root,   "models",  "hn_experiments", version)
+    plots_root   = os.path.join(results_dir, "hn_experiments", version)
+    os.makedirs(models_root, exist_ok=True)
+    os.makedirs(plots_root,  exist_ok=True)
+
+    print(f"\n  Version    : {version}")
+    print(f"  Models  →  {models_root}")
+    print(f"  Results →  {plots_root}")
+
     all_experiments = []
 
     for cfg in hn_configs:
@@ -1055,10 +1077,10 @@ def run_hn_experiments(base_args, results_dir: str):
         exp_args.experiment_label = cfg["label"]
 
         safe_label          = cfg["label"].replace("=", "_")
-        exp_args.output_dir = os.path.join(
-            os.path.dirname(results_dir), "models", "hn_experiments", safe_label
-        )
-        exp_args.plot_dir   = os.path.join(results_dir, "hn_experiments", safe_label)
+        # model artifacts → models/hn_experiments/<version>/<label>/
+        exp_args.output_dir = os.path.join(models_root, safe_label)
+        # training curve plots → results/hn_experiments/<version>/<label>/
+        exp_args.plot_dir   = os.path.join(plots_root,  safe_label)
 
         train(exp_args)
 
@@ -1070,16 +1092,15 @@ def run_hn_experiments(base_args, results_dir: str):
             "label":   cfg["label"],
             "history": saved["history"],
             "color":   cfg["color"],
+            "version": version,
         })
 
-    # generate comparison plot
-    plots_root = os.path.join(results_dir, "hn_experiments")
-    os.makedirs(plots_root, exist_ok=True)
+    # comparison plot → results/hn_experiments/<version>/hn_comparison.png
     plot_hn_experiment_comparison(all_experiments, plots_root)
 
     # print summary table
     print(f"\n{'='*65}")
-    print("  HN EXPERIMENT SUMMARY")
+    print(f"  HN EXPERIMENT SUMMARY  [{version}]")
     print(f"{'='*65}")
     print(f"  {'Config':<12} | {'Best Val Acc':>12} | {'Best Epoch':>10} | {'Final Val Loss':>14}")
     print("  " + "─" * 55)
@@ -1097,6 +1118,7 @@ def run_hn_experiments(base_args, results_dir: str):
             final_loss = history[-1]["loss"]
         print(f"  {exp['label']:<12} | {best_acc:>11.1f}% | {best_epoch:>10} | {final_loss:>14.4f}")
 
+    # summary JSON → results/hn_experiments/<version>/hn_summary.json
     summary_path = os.path.join(plots_root, "hn_summary.json")
     with open(summary_path, "w") as f:
         json.dump(all_experiments, f, indent=2)
@@ -1128,6 +1150,10 @@ if __name__ == "__main__":
                         help="Run temperature comparison experiments")
     parser.add_argument("--hn-experiments", action="store_true",
                         help="Run top_k hard negative comparison (0, 1, 3, 5)")
+    parser.add_argument("--exp-version",    type=str, default="v1",
+                        help="Version tag for experiment output dirs (default: v1). "
+                             "Models → models/hn_experiments/<version>/<label>  "
+                             "Plots  → results/hn_experiments/<version>/<label>")
 
     # ── hard negative mining args ──────────────────────────────
     parser.add_argument("--hard-negatives",   action="store_true",
@@ -1143,7 +1169,7 @@ if __name__ == "__main__":
 
     if args.hn_experiments:
         # compare top_k = 0, 1, 3, 5 hard negatives
-        run_hn_experiments(args, args.results_dir)
+        run_hn_experiments(args, args.results_dir, version=args.exp_version)
     elif args.experiments:
         # run temperature comparison experiments
         run_experiments(args, args.results_dir)
