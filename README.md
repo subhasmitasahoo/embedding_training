@@ -39,8 +39,17 @@ This repo is built **step by step**. You can clone it, follow each step in order
   - [What is a hard negative](#what-is-a-hard-negative)
   - [Mining algorithm](#mining-algorithm)
   - [Modified loss](#modified-loss)
+  - [Dynamic pairing](#dynamic-pairing)
   - [Running experiments](#running-experiments)
-  - [Results](#results)
+  - [Results — v2 full 2×4 grid](#results--v2-full-24-grid-clinc-150-15-epochs-temp005-pairs_per_intent25)
+  - [Key findings from the 2×4 grid](#key-findings-from-the-24-grid)
+- [Step 9 — Stability Analysis](#step-9--stability-analysis)
+  - [What varies between runs](#what-varies-between-runs)
+  - [Running the stability sweep](#running-the-stability-sweep)
+  - [Results — Sweep 1 (seeds 42–46)](#results--sweep-1-seeds-4246-consecutive)
+  - [Results — Sweep 2 (seeds 7, 23, 99, 137, 256)](#results--sweep-2-seeds-7-23-99-137-256--spread-out)
+  - [Combined view — all 10 runs](#combined-view--all-10-runs)
+  - [Key findings from stability analysis](#key-findings-from-stability-analysis)
 - [Dependencies](#dependencies)
 
 ---
