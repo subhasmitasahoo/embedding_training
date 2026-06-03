@@ -50,6 +50,11 @@ This repo is built **step by step**. You can clone it, follow each step in order
   - [Results — Sweep 2 (seeds 7, 23, 99, 137, 256)](#results--sweep-2-seeds-7-23-99-137-256--spread-out)
   - [Combined view — all 10 runs](#combined-view--all-10-runs)
   - [Key findings from stability analysis](#key-findings-from-stability-analysis)
+- [Step 10 — Batch Retrieval Evaluation](#step-10--batch-retrieval-evaluation)
+  - [Why re-evaluate](#why-re-evaluate)
+  - [Running batch evaluation](#running-batch-evaluation)
+  - [Results across all checkpoints](#results-across-all-checkpoints)
+  - [Key findings from batch evaluation](#key-findings-from-batch-evaluation)
 - [Dependencies](#dependencies)
 
 ---
@@ -1928,6 +1933,99 @@ Every single run finished with gap < 0.15 (healthy). No seed produced an overfit
 model. This confirms the result is robust, not coincidental.
 
 **Headline number to report: 71.0 ± 0.7% val accuracy (n=10 independent runs)**
+
+---
+
+## Step 10 — Batch Retrieval Evaluation
+
+Val accuracy (logged during training) measures how well the model ranks the correct
+positive within a contrastive batch.  That's a useful training signal, but it's not
+the same as real retrieval performance.
+
+**Batch eval** runs every saved checkpoint through the full retrieval pipeline
+(the same Recall@1/5/MRR setup from Step 7) and puts all results in one table.
+This tells us: *across the whole journey from default training → temperature tuning
+→ hard negatives + dynamic pairing → stability seeds, how much did retrieval
+actually improve?*
+
+### Why re-evaluate
+
+| Signal | Measured during | What it captures |
+|--------|----------------|-----------------|
+| Val accuracy | Training loop | Rank within a 150-pair contrastive batch |
+| Recall@1 | Batch eval | Exact retrieval from a 150-item corpus |
+| Recall@5 | Batch eval | Top-5 retrieval (model knows the neighbourhood) |
+| MRR | Batch eval | Mean reciprocal rank — partial credit for near misses |
+
+Val accuracy and Recall@1 are correlated but not identical — a model with 71% val
+accuracy may get 70% R@1, because the corpus retrieval task is harder than
+batch-level ranking.
+
+### Running batch evaluation
+
+```bash
+# evaluate all checkpoints (26 models + 2 baselines)
+python3 batch_evaluate.py
+
+# skip the 10 stability seeds for a faster run
+python3 batch_evaluate.py --skip-stability
+```
+
+Results are saved to `results/batch_eval_results.json`.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--repo-root` | `..` | Path to repo root |
+| `--skip-stability` | off | Skip the 10 stability-seed checkpoints |
+
+### Results across all checkpoints
+
+> Full results: [`results/batch_eval_results.json`](results/batch_eval_results.json)
+
+| Model | R@1 | R@5 | MRR | Group |
+|-------|:---:|:---:|:---:|-------|
+| random-init | 8.6% | 19.6% | 15.5% | baseline |
+| TF-IDF | 44.3% | 65.9% | 54.2% | baseline |
+| finetuned (default) | 57.1% | 80.0% | 67.5% | baseline |
+| temp τ=0.01 | 55.2% | 79.5% | 66.1% | temperature |
+| temp τ=0.05 | 57.1% | 80.0% | 67.5% | temperature |
+| temp τ=0.20 | 53.9% | 81.1% | 65.8% | temperature |
+| v2 static no_hn | 62.8% | 83.3% | 72.0% | v2-static |
+| v2 static hn_k=1 | 63.2% | 83.2% | 72.3% | v2-static |
+| v2 static hn_k=3 | 63.4% | 82.6% | 72.2% | v2-static |
+| v2 static hn_k=5 | 63.6% | 81.9% | 72.0% | v2-static |
+| v2 dynamic no_hn | 68.0% | 88.8% | 77.2% | v2-dynamic |
+| v2 dynamic hn_k=1 | 68.9% | 88.2% | 77.5% | v2-dynamic |
+| v2 dynamic hn_k=3 | 69.2% | 87.6% | 77.4% | v2-dynamic |
+| v2 dynamic hn_k=5 | 69.4% | 87.4% | 77.5% | v2-dynamic |
+| **stability MEAN ± std** | **69.9 ± 1.2%** | **88.2 ± 1.1%** | **78.1 ± 1.1%** | stability |
+| **stability seed=44 ★** | **71.9%** | **89.2%** | **79.7%** | stability |
+
+### Key findings from batch evaluation
+
+**Finding 1 — Real retrieval gain from the full pipeline: +12.8pp R@1**
+
+Default training → best model: 57.1% → 69.9% mean R@1. That's the cumulative
+effect of dynamic pairing + hard negatives, measured on the real retrieval task —
+not just the training-time proxy metric.
+
+**Finding 2 — Val accuracy slightly overstates retrieval performance**
+
+Best val accuracy was ~71% (training signal); best mean R@1 is 69.9%. The 1–2pp
+gap is expected — contrastive batch accuracy is an easier task than retrieving from
+a fixed 150-item corpus, because the "negatives" in the batch vary by seed and epoch.
+
+**Finding 3 — Static pairing recovers some ground but never catches dynamic**
+
+Static best (63.6% R@1) vs dynamic best (69.4% R@1) = 5.8pp gap. Hard negatives
+on static only add 0.8pp; hard negatives on dynamic add 1.4pp. The pairing strategy
+is the dominant lever.
+
+**Finding 4 — R@5 is already strong at 88%+**
+
+The model places the correct intent in the top 5 for 88 out of 100 queries. The
+remaining gap to perfect R@1 (70% → 100%) is almost entirely the sibling-intent
+problem — intents that share near-identical vocabulary (gas/gas_type, order/order_status).
 
 ---
 

@@ -1,0 +1,174 @@
+/Users/subha/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+
+Loading dataset...
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+Retrieval corpus:
+  Corpus size  : 150 entries  (1 per intent)
+  Eval queries : 4,350 queries  (29 per intent on avg)
+  Corpus : 150 intents
+  Queries: 4350 eval queries
+
+Computing baselines (TF-IDF + random-init) — done once for all checkpoints...
+  [1/2] TF-IDF...
+  TF-IDF vocab size : 446 words
+  [2/2] Random-init model...
+  [01/26] finetuned (default)
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/finetuned/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/finetuned/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [02/26] temp τ=0.01
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/experiments/temp_0.01/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/experiments/temp_0.01/model.pt
+  Config     : temp=0.01  epochs=15  lr=0.0003
+  [03/26] temp τ=0.05
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/experiments/temp_0.05/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/experiments/temp_0.05/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [04/26] temp τ=0.20
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/experiments/temp_0.20/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/experiments/temp_0.20/model.pt
+  Config     : temp=0.2  epochs=15  lr=0.0003
+  [05/26] v1 dynamic no_hn
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v1/no_hn/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v1/no_hn/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [06/26] v1 dynamic hn_k=1
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v1/hn_k_1/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v1/hn_k_1/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [07/26] v1 dynamic hn_k=3
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v1/hn_k_3/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v1/hn_k_3/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [08/26] v1 dynamic hn_k=5
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v1/hn_k_5/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v1/hn_k_5/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [09/26] v2 static  no_hn
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/static/no_hn/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/static/no_hn/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [10/26] v2 static  hn_k=1
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/static/hn_k_1/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/static/hn_k_1/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [11/26] v2 static  hn_k=3
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/static/hn_k_3/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/static/hn_k_3/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [12/26] v2 static  hn_k=5
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/static/hn_k_5/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/static/hn_k_5/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [13/26] v2 dynamic no_hn
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/dynamic/no_hn/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/dynamic/no_hn/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [14/26] v2 dynamic hn_k=1
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/dynamic/hn_k_1/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/dynamic/hn_k_1/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [15/26] v2 dynamic hn_k=3
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/dynamic/hn_k_3/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/dynamic/hn_k_3/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [16/26] v2 dynamic hn_k=5
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/dynamic/hn_k_5/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/hn_experiments/v2/dynamic/hn_k_5/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [17/26] stability seed=7
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_7/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_7/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [18/26] stability seed=23
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_23/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_23/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [19/26] stability seed=42
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_42/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_42/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [20/26] stability seed=43
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_43/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_43/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [21/26] stability seed=44
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_44/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_44/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [22/26] stability seed=45
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_45/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_45/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [23/26] stability seed=46
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_46/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_46/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [24/26] stability seed=99
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_99/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_99/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [25/26] stability seed=137
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_137/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_137/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+  [26/26] stability seed=256
+  Tokenizer  : 3689 tokens  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_256/tokenizer.json
+  Weights    : 872,576 params  ← loaded from /Users/subha/Documents/Model training/embedding_training/models/stability/seed_256/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+
+======================================================================
+  BATCH EVALUATION RESULTS — Recall@1 / Recall@5 / MRR (micro)
+======================================================================
+  Model                      |    R@1 |    R@5 |    MRR | Group
+  ──────────────────────────────────────────────────────────────
+  random-init                |  10.0% |  21.0% |  16.7% | baseline
+  TF-IDF                     |  44.3% |  65.9% |  54.2% | baseline
+  ──────────────────────────────────────────────────────────────
+  finetuned (default)        |  57.1% |  80.0% |  67.5% | baseline
+  ──────────────────────────────────────────────────────────────
+  temp τ=0.01                |  55.2% |  79.5% |  66.1% | temperature
+  temp τ=0.05                |  57.1% |  80.0% |  67.5% | temperature
+  temp τ=0.20                |  53.9% |  81.1% |  65.8% | temperature
+  ──────────────────────────────────────────────────────────────
+  v1 dynamic no_hn           |  68.0% |  88.8% |  77.2% | v1
+  v1 dynamic hn_k=1          |  68.9% |  88.2% |  77.5% | v1
+  v1 dynamic hn_k=3          |  69.2% |  87.6% |  77.4% | v1
+  v1 dynamic hn_k=5          |  69.4% |  87.4% |  77.5% | v1
+  ──────────────────────────────────────────────────────────────
+  v2 static  no_hn           |  62.8% |  83.3% |  72.0% | v2-static
+  v2 static  hn_k=1          |  63.2% |  83.2% |  72.3% | v2-static
+  v2 static  hn_k=3          |  63.4% |  82.6% |  72.2% | v2-static
+  v2 static  hn_k=5          |  63.6% |  81.9% |  72.0% | v2-static
+  ──────────────────────────────────────────────────────────────
+  v2 dynamic no_hn           |  68.0% |  88.8% |  77.2% | v2-dynamic
+  v2 dynamic hn_k=1          |  68.9% |  88.2% |  77.5% | v2-dynamic
+  v2 dynamic hn_k=3          |  69.2% |  87.6% |  77.4% | v2-dynamic
+  v2 dynamic hn_k=5          |  69.4% |  87.4% |  77.5% | v2-dynamic
+  ──────────────────────────────────────────────────────────────
+  stability seed=7           |  70.3% |  88.5% |  78.5% | stability
+  stability seed=23          |  70.3% |  88.2% |  78.2% | stability
+  stability seed=42          |  69.4% |  87.4% |  77.5% | stability
+  stability seed=43          |  70.1% |  87.6% |  77.7% | stability
+  stability seed=44          |  71.9% |  89.2% |  79.7% | stability
+  stability seed=45          |  68.1% |  86.1% |  76.1% | stability
+  stability seed=46          |  71.1% |  89.7% |  79.2% | stability
+  stability seed=99          |  69.9% |  89.8% |  78.7% | stability
+  stability seed=137         |  70.0% |  88.7% |  78.5% | stability
+  stability seed=256         |  67.6% |  87.0% |  76.4% | stability
+  ──────────────────────────────────────────────────────────────
+  stability MEAN ± std       | 69.9±1.2% | 88.2±1.1% | 78.1±1.1% | stability
+======================================================================
+
+  Best checkpoint : stability seed=44
+  R@1= 71.9%  R@5= 89.2%  MRR= 79.7%
+
+  Results → /Users/subha/Documents/Model training/embedding_training/results/batch_eval_results.json
