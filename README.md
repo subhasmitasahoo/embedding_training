@@ -55,6 +55,11 @@ This repo is built **step by step**. You can clone it, follow each step in order
   - [Running batch evaluation](#running-batch-evaluation)
   - [Results across all checkpoints](#results-across-all-checkpoints)
   - [Key findings from batch evaluation](#key-findings-from-batch-evaluation)
+- [Step 11 — Evaluation Metric Stability](#step-11--evaluation-metric-stability)
+  - [The corpus-split problem](#the-corpus-split-problem)
+  - [Running eval stability](#running-eval-stability)
+  - [Results across corpus splits](#results-across-corpus-splits)
+  - [Key findings from eval stability](#key-findings-from-eval-stability)
 - [Dependencies](#dependencies)
 
 ---
@@ -2026,6 +2031,103 @@ is the dominant lever.
 The model places the correct intent in the top 5 for 88 out of 100 queries. The
 remaining gap to perfect R@1 (70% → 100%) is almost entirely the sibling-intent
 problem — intents that share near-identical vocabulary (gas/gas_type, order/order_status).
+
+---
+
+## Step 11 — Evaluation Metric Stability
+
+The batch evaluation in Step 10 reported a single number per model — but that number
+depends on *which query* was picked as the corpus representative for each intent.
+Our `build_corpus_and_queries()` always picks `query[0]`, which is arbitrary.
+
+This step asks: **how much does the evaluation result change when we randomise the
+corpus selection?** If the answer is "not much", our metric is trustworthy.
+If the answer is "a lot", the single-split result is noisy and we should always
+report a mean over multiple splits.
+
+### The corpus-split problem
+
+In retrieval evaluation with 1 corpus entry per intent:
+
+```
+Corpus entry for track_order : "where is my order"         ← split A
+Corpus entry for track_order : "has my package shipped"    ← split B
+```
+
+If the corpus entry happens to be phrased unusually, *every query for that intent*
+will score worse — not because the model is bad, but because the reference is hard
+to match.  This noise is independent of model quality.
+
+### Running eval stability
+
+```bash
+# 5 random corpus splits on the best model (default)
+python3 eval_stability.py
+
+# custom model or more splits
+python3 eval_stability.py --model-dir ../models/hn_experiments/v2/dynamic/hn_k_5 --n-splits 10
+```
+
+Results are saved to `results/eval_stability_results.json`.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model-dir` | `../models/stability/seed_44` | Checkpoint to evaluate |
+| `--n-splits` | 5 | Number of random corpus splits |
+| `--seed` | 42 | Base seed for split randomisation |
+| `--no-tfidf` | off | Skip TF-IDF baseline (faster) |
+
+### Results across corpus splits
+
+> Full results: [`results/eval_stability_results.json`](results/eval_stability_results.json)
+
+**Model: stability seed=44** (best single-seed checkpoint)
+
+| Split (seed) | R@1 | R@5 | MRR | TF-IDF R@1 | TF-IDF R@5 | TF-IDF MRR |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 42 | 70.8% | 87.7% | 78.5% | 42.8% | 65.0% | 53.0% |
+| 43 | 72.9% | 89.7% | 80.4% | 43.6% | 66.0% | 54.0% |
+| 44 | 69.1% | 87.4% | 77.3% | 42.2% | 62.6% | 51.8% |
+| 45 | 74.8% | 89.8% | 81.6% | 45.0% | 67.2% | 55.1% |
+| 46 | 73.3% | 89.5% | 80.5% | 45.0% | 65.2% | 54.4% |
+
+**Summary:**
+
+| Metric | Fine-tuned Mean | ± Std | Range | TF-IDF Mean | ± Std |
+|--------|:--------------:|:-----:|:-----:|:-----------:|:-----:|
+| Recall@1 | **72.2%** | **±2.0%** | 5.7% | 43.7% | ±1.1% |
+| Recall@5 | **88.8%** | **±1.0%** | 2.3% | 65.2% | ±1.5% |
+| MRR      | **79.7%** | **±1.6%** | 4.3% | 53.7% | ±1.1% |
+
+### Key findings from eval stability
+
+**Finding 1 — The headline metric is 72.2 ± 2.0% R@1**
+
+Our original single-split result (71.9%) was measured with a fixed corpus choice.
+Across 5 random splits the true mean is **72.2% R@1** — slightly higher — with a
+±2.0% std driven by which query happens to be selected as the corpus representative.
+This is the number to report.
+
+**Finding 2 — ±2% is corpus noise, not model noise**
+
+The model-training stability (Step 9) gave ±0.7% std across different seeds.
+The eval-corpus stability (this step) gives ±2.0% std across different corpus splits.
+The **evaluation setup contributes ~3× more variance than the model itself**.
+This is a property of single-representative retrieval eval on a 150-intent dataset —
+one bad corpus pick can tank an entire intent's recall.
+
+**Finding 3 — R@5 is a more reliable metric (±1.0%)**
+
+Recall@5 is far less sensitive to corpus choice because the model gets 5 chances
+to hit the correct intent. If your application can show 5 suggestions, R@5 is both
+more useful *and* more stable to report.
+
+**Finding 4 — TF-IDF has lower eval variance (±1.1% R@1) than our model (±2.0%)**
+
+TF-IDF relies on exact keyword overlap, which is less sensitive to *which specific
+phrasing* is the corpus representative — all phrasings of the same intent share
+mostly the same keywords. The embedding model is more expressive but therefore
+more affected by the exact choice of reference sentence.
 
 ---
 

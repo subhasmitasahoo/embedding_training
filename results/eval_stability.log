@@ -1,0 +1,52 @@
+/Users/subha/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+=================================================================
+  EVALUATION STABILITY — corpus-split randomisation
+=================================================================
+  Model     : ../models/stability/seed_44
+  Splits    : 5  (seeds 42–46)
+  TF-IDF    : yes
+
+Loading dataset...
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+Loading model...
+  Tokenizer  : 3689 tokens  ← loaded from ../models/stability/seed_44/tokenizer.json
+  Weights    : 872,576 params  ← loaded from ../models/stability/seed_44/model.pt
+  Config     : temp=0.05  epochs=15  lr=0.0003
+
+  Split |  seed |    R@1 |    R@5 |    MRR || TF-IDF R@1 |    R@5 |    MRR
+  ─────────────────────────────────────────────────────────────────────────────────────
+  TF-IDF vocab size : 434 words
+      1 |    42 |  70.8% |  87.7% |  78.5% ||      42.8% |  65.0% |  53.0%
+  TF-IDF vocab size : 484 words
+      2 |    43 |  72.9% |  89.7% |  80.4% ||      43.6% |  66.0% |  54.0%
+  TF-IDF vocab size : 475 words
+      3 |    44 |  69.1% |  87.4% |  77.3% ||      42.2% |  62.6% |  51.8%
+  TF-IDF vocab size : 464 words
+      4 |    45 |  74.8% |  89.8% |  81.6% ||      45.0% |  67.2% |  55.1%
+  TF-IDF vocab size : 446 words
+      5 |    46 |  73.3% |  89.5% |  80.5% ||      45.0% |  65.2% |  54.4%
+
+=================================================================
+  FINE-TUNED MODEL — summary across splits
+=================================================================
+  Metric       |    Mean |   ± Std |     Min |     Max |   Range
+  ───────────────────────────────────────────────────────
+  Recall@1     |  72.18% |   1.99% |  69.13% |  74.83% |   5.70%
+  Recall@5     |  88.83% |   1.01% |  87.45% |  89.77% |   2.32%
+  MRR          |  79.65% |   1.55% |  77.31% |  81.58% |   4.27%
+
+  TF-IDF BASELINE — summary across splits
+  ───────────────────────────────────────────────────────
+  Recall@1     |  43.72% |   1.14% |  42.21% |  45.03% |   2.83%
+  Recall@5     |  65.20% |   1.50% |  62.62% |  67.17% |   4.55%
+  MRR          |  53.65% |   1.14% |  51.79% |  55.05% |   3.26%
+
+  Results → /Users/subha/Documents/Model training/embedding_training/results/eval_stability_results.json
