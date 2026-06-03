@@ -1,0 +1,319 @@
+/Users/subha/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:198: RuntimeWarning: divide by zero encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:198: RuntimeWarning: overflow encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:198: RuntimeWarning: invalid value encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+
+=================================================================
+  STABILITY EXPERIMENT — 5 independent runs
+  Config : dynamic pairing + hard_negatives + hn_top_k=5
+  Seeds  : [42, 43, 44, 45, 46]
+  Models → ../models/stability
+  Results→ ../results/stability
+=================================================================
+
+─────────────────────────────────────────────────────────────────
+  RUN  seed=42  (1/5)
+─────────────────────────────────────────────────────────────────
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Hard negatives: top_k=5, start_epoch=4, refresh_every=3
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0575 | train_acc 2.3% | val_loss 4.6351 | val_acc 14.8% | time 2.5s
+  Epoch 02 | train_loss 4.7282 | train_acc 5.0% | val_loss 3.9851 | val_acc 20.1% | time 2.4s
+  Epoch 03 | train_loss 4.0292 | train_acc 13.1% | val_loss 3.0793 | val_acc 33.7% | time 2.4s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 04 | train_loss 3.5217 | train_acc 24.0% | val_loss 2.4785 | val_acc 45.1% | time 9.2s
+  Epoch 05 | train_loss 2.9832 | train_acc 35.8% | val_loss 2.0865 | val_acc 51.5% | time 9.2s
+  Epoch 06 | train_loss 2.4681 | train_acc 46.0% | val_loss 1.8090 | val_acc 56.7% | time 9.5s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 07 | train_loss 2.3653 | train_acc 53.3% | val_loss 1.6653 | val_acc 60.1% | time 9.7s
+  Epoch 08 | train_loss 2.0870 | train_acc 59.6% | val_loss 1.5903 | val_acc 63.3% | time 9.9s
+  Epoch 09 | train_loss 1.8492 | train_acc 65.0% | val_loss 1.5074 | val_acc 65.0% | time 9.5s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 10 | train_loss 1.7297 | train_acc 68.7% | val_loss 1.4405 | val_acc 66.2% | time 9.3s
+  Epoch 11 | train_loss 1.5854 | train_acc 72.0% | val_loss 1.3977 | val_acc 67.7% | time 9.1s
+  Epoch 12 | train_loss 1.4249 | train_acc 74.4% | val_loss 1.3926 | val_acc 68.8% | time 9.3s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 13 | train_loss 1.3932 | train_acc 75.8% | val_loss 1.3870 | val_acc 69.7% | time 9.3s
+  Epoch 14 | train_loss 1.3126 | train_acc 78.2% | val_loss 1.3778 | val_acc 70.5% | time 9.3s
+  Epoch 15 | train_loss 1.2335 | train_acc 80.2% | val_loss 1.3749 | val_acc 70.3% | time 8.9s
+
+  Best val accuracy : 70.5% at epoch 14
+  Final loss gap    : 0.1414 (healthy)
+  Plot      → ../results/stability/seed_42/training_curves_seed_42.png
+
+  Model     → ../models/stability/seed_42/model.pt
+  Tokenizer → ../models/stability/seed_42/tokenizer.json
+  Config    → ../models/stability/seed_42/config.json
+  → seed=42  val_acc=70.5%  gap=0.065
+
+─────────────────────────────────────────────────────────────────
+  RUN  seed=43  (2/5)
+─────────────────────────────────────────────────────────────────
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Hard negatives: top_k=5, start_epoch=4, refresh_every=3
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0575 | train_acc 2.5% | val_loss 4.5772 | val_acc 15.1% | time 2.3s
+  Epoch 02 | train_loss 4.6687 | train_acc 4.6% | val_loss 4.0824 | val_acc 19.1% | time 2.3s
+  Epoch 03 | train_loss 4.0003 | train_acc 12.0% | val_loss 3.1267 | val_acc 33.2% | time 2.3s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 04 | train_loss 3.5263 | train_acc 25.7% | val_loss 2.4592 | val_acc 45.5% | time 9.4s
+  Epoch 05 | train_loss 2.8783 | train_acc 37.8% | val_loss 2.0955 | val_acc 52.0% | time 9.8s
+  Epoch 06 | train_loss 2.4435 | train_acc 47.4% | val_loss 1.8426 | val_acc 57.0% | time 9.5s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 07 | train_loss 2.2827 | train_acc 55.2% | val_loss 1.6789 | val_acc 60.7% | time 9.6s
+  Epoch 08 | train_loss 2.0584 | train_acc 60.0% | val_loss 1.5779 | val_acc 63.7% | time 9.2s
+  Epoch 09 | train_loss 1.8331 | train_acc 65.0% | val_loss 1.5048 | val_acc 65.5% | time 9.1s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 10 | train_loss 1.6928 | train_acc 70.0% | val_loss 1.4489 | val_acc 67.6% | time 9.8s
+  Epoch 11 | train_loss 1.5598 | train_acc 72.9% | val_loss 1.4181 | val_acc 68.7% | time 9.4s
+  Epoch 12 | train_loss 1.4289 | train_acc 74.6% | val_loss 1.4049 | val_acc 69.0% | time 9.9s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 13 | train_loss 1.3882 | train_acc 76.5% | val_loss 1.3814 | val_acc 70.5% | time 9.2s
+  Epoch 14 | train_loss 1.3134 | train_acc 77.6% | val_loss 1.3684 | val_acc 71.0% | time 9.2s
+  Epoch 15 | train_loss 1.2564 | train_acc 78.7% | val_loss 1.3615 | val_acc 71.3% | time 9.1s
+
+  Best val accuracy : 71.3% at epoch 15
+  Final loss gap    : 0.1051 (healthy)
+  Plot      → ../results/stability/seed_43/training_curves_seed_43.png
+
+  Model     → ../models/stability/seed_43/model.pt
+  Tokenizer → ../models/stability/seed_43/tokenizer.json
+  Config    → ../models/stability/seed_43/config.json
+  → seed=43  val_acc=71.3%  gap=0.105
+
+─────────────────────────────────────────────────────────────────
+  RUN  seed=44  (3/5)
+─────────────────────────────────────────────────────────────────
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Hard negatives: top_k=5, start_epoch=4, refresh_every=3
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.1130 | train_acc 2.4% | val_loss 4.6343 | val_acc 14.7% | time 2.4s
+  Epoch 02 | train_loss 4.7629 | train_acc 4.5% | val_loss 4.1604 | val_acc 18.4% | time 2.4s
+  Epoch 03 | train_loss 4.0832 | train_acc 12.7% | val_loss 3.1282 | val_acc 32.9% | time 2.5s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 04 | train_loss 3.5403 | train_acc 24.7% | val_loss 2.4799 | val_acc 44.7% | time 9.2s
+  Epoch 05 | train_loss 2.9229 | train_acc 36.2% | val_loss 2.0310 | val_acc 52.0% | time 8.9s
+  Epoch 06 | train_loss 2.4099 | train_acc 47.5% | val_loss 1.7878 | val_acc 58.3% | time 9.1s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 07 | train_loss 2.3086 | train_acc 55.2% | val_loss 1.6038 | val_acc 63.1% | time 9.3s
+  Epoch 08 | train_loss 2.0138 | train_acc 61.3% | val_loss 1.5029 | val_acc 65.5% | time 8.9s
+  Epoch 09 | train_loss 1.7422 | train_acc 67.2% | val_loss 1.4474 | val_acc 66.8% | time 8.9s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 10 | train_loss 1.6605 | train_acc 71.2% | val_loss 1.4044 | val_acc 68.9% | time 8.8s
+  Epoch 11 | train_loss 1.4984 | train_acc 74.5% | val_loss 1.3739 | val_acc 69.9% | time 9.0s
+  Epoch 12 | train_loss 1.3512 | train_acc 76.5% | val_loss 1.3515 | val_acc 70.3% | time 9.4s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 13 | train_loss 1.3128 | train_acc 78.4% | val_loss 1.3323 | val_acc 71.1% | time 9.0s
+  Epoch 14 | train_loss 1.2396 | train_acc 79.3% | val_loss 1.3322 | val_acc 71.5% | time 9.1s
+  Epoch 15 | train_loss 1.1800 | train_acc 80.6% | val_loss 1.3224 | val_acc 71.9% | time 9.3s
+
+  Best val accuracy : 71.9% at epoch 15
+  Final loss gap    : 0.1424 (healthy)
+  Plot      → ../results/stability/seed_44/training_curves_seed_44.png
+
+  Model     → ../models/stability/seed_44/model.pt
+  Tokenizer → ../models/stability/seed_44/tokenizer.json
+  Config    → ../models/stability/seed_44/config.json
+  → seed=44  val_acc=71.9%  gap=0.142
+
+─────────────────────────────────────────────────────────────────
+  RUN  seed=45  (4/5)
+─────────────────────────────────────────────────────────────────
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Hard negatives: top_k=5, start_epoch=4, refresh_every=3
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0565 | train_acc 2.7% | val_loss 4.5353 | val_acc 13.7% | time 2.4s
+  Epoch 02 | train_loss 4.7023 | train_acc 4.4% | val_loss 4.0903 | val_acc 18.9% | time 2.5s
+  Epoch 03 | train_loss 4.0739 | train_acc 10.4% | val_loss 3.1753 | val_acc 31.2% | time 2.3s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 04 | train_loss 3.5737 | train_acc 22.4% | val_loss 2.5588 | val_acc 42.9% | time 8.9s
+  Epoch 05 | train_loss 2.9842 | train_acc 34.5% | val_loss 2.1641 | val_acc 50.3% | time 9.2s
+  Epoch 06 | train_loss 2.5246 | train_acc 45.0% | val_loss 1.8955 | val_acc 55.5% | time 9.0s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 07 | train_loss 2.4332 | train_acc 50.9% | val_loss 1.7163 | val_acc 59.5% | time 9.3s
+  Epoch 08 | train_loss 2.1301 | train_acc 57.8% | val_loss 1.5997 | val_acc 63.1% | time 9.0s
+  Epoch 09 | train_loss 1.8660 | train_acc 62.8% | val_loss 1.5378 | val_acc 64.8% | time 8.9s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 10 | train_loss 1.7834 | train_acc 68.3% | val_loss 1.4503 | val_acc 66.8% | time 8.9s
+  Epoch 11 | train_loss 1.5997 | train_acc 72.4% | val_loss 1.4153 | val_acc 67.7% | time 8.9s
+  Epoch 12 | train_loss 1.4906 | train_acc 73.1% | val_loss 1.3912 | val_acc 68.7% | time 9.3s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 13 | train_loss 1.4112 | train_acc 75.9% | val_loss 1.3852 | val_acc 69.3% | time 9.5s
+  Epoch 14 | train_loss 1.3372 | train_acc 77.3% | val_loss 1.3865 | val_acc 69.5% | time 9.1s
+  Epoch 15 | train_loss 1.2967 | train_acc 78.0% | val_loss 1.3762 | val_acc 69.9% | time 9.0s
+
+  Best val accuracy : 69.9% at epoch 15
+  Final loss gap    : 0.0795 (healthy)
+  Plot      → ../results/stability/seed_45/training_curves_seed_45.png
+
+  Model     → ../models/stability/seed_45/model.pt
+  Tokenizer → ../models/stability/seed_45/tokenizer.json
+  Config    → ../models/stability/seed_45/config.json
+  → seed=45  val_acc=69.9%  gap=0.080
+
+─────────────────────────────────────────────────────────────────
+  RUN  seed=46  (5/5)
+─────────────────────────────────────────────────────────────────
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Hard negatives: top_k=5, start_epoch=4, refresh_every=3
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0952 | train_acc 2.8% | val_loss 4.5554 | val_acc 13.9% | time 2.3s
+  Epoch 02 | train_loss 4.6855 | train_acc 5.4% | val_loss 3.8692 | val_acc 21.3% | time 2.3s
+  Epoch 03 | train_loss 3.9199 | train_acc 13.8% | val_loss 2.9700 | val_acc 34.8% | time 2.4s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 04 | train_loss 3.4630 | train_acc 27.1% | val_loss 2.4099 | val_acc 44.1% | time 8.9s
+  Epoch 05 | train_loss 2.8841 | train_acc 37.8% | val_loss 2.0405 | val_acc 50.5% | time 8.9s
+  Epoch 06 | train_loss 2.4484 | train_acc 46.6% | val_loss 1.7891 | val_acc 56.5% | time 9.0s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 07 | train_loss 2.3377 | train_acc 53.9% | val_loss 1.6237 | val_acc 60.7% | time 8.9s
+  Epoch 08 | train_loss 2.0429 | train_acc 59.8% | val_loss 1.5175 | val_acc 63.1% | time 8.9s
+  Epoch 09 | train_loss 1.8178 | train_acc 65.5% | val_loss 1.4164 | val_acc 66.4% | time 9.4s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 10 | train_loss 1.6908 | train_acc 70.5% | val_loss 1.3677 | val_acc 68.4% | time 8.9s
+  Epoch 11 | train_loss 1.5534 | train_acc 72.4% | val_loss 1.3401 | val_acc 69.0% | time 8.9s
+  Epoch 12 | train_loss 1.4036 | train_acc 75.3% | val_loss 1.3242 | val_acc 70.1% | time 8.8s
+  [HN] Mining hard negatives (top_k=5)...
+  Epoch 13 | train_loss 1.3724 | train_acc 77.4% | val_loss 1.3013 | val_acc 70.9% | time 8.9s
+  Epoch 14 | train_loss 1.2819 | train_acc 78.3% | val_loss 1.2851 | val_acc 71.1% | time 8.8s
+  Epoch 15 | train_loss 1.2260 | train_acc 80.5% | val_loss 1.2752 | val_acc 71.5% | time 8.9s
+
+  Best val accuracy : 71.5% at epoch 15
+  Final loss gap    : 0.0492 (healthy)
+  Plot      → ../results/stability/seed_46/training_curves_seed_46.png
+
+  Model     → ../models/stability/seed_46/model.pt
+  Tokenizer → ../models/stability/seed_46/tokenizer.json
+  Config    → ../models/stability/seed_46/config.json
+  → seed=46  val_acc=71.5%  gap=0.049
+
+=================================================================
+  STABILITY SUMMARY  (n=5 seeds)
+=================================================================
+  Seed     |  Val Acc | Train Loss |  Train Acc |  Val Loss |     Gap
+  ─────────────────────────────────────────────────────────────
+  42       |    70.5% |      1.313 |      78.2% |     1.378 |   0.065
+  43       |    71.3% |      1.256 |      78.7% |     1.361 |   0.105
+  44       |    71.9% |      1.180 |      80.6% |     1.322 |   0.142
+  45       |    69.9% |      1.297 |      78.0% |     1.376 |   0.080
+  46       |    71.5% |      1.226 |      80.5% |     1.275 |   0.049
+  ─────────────────────────────────────────────────────────────
+  mean     |    71.0% |      1.254 |      79.2% |     1.343 |   0.088
+  ± std    |    0.72% |      0.048 |      1.12% |     0.039 |   0.033
+  range    |   69.9–71.9%
+
+  Summary → ../results/stability/stability_summary.json
+  Plot    → ../results/stability/stability_plot.png

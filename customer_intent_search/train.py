@@ -1135,6 +1135,227 @@ def run_hn_experiments(base_args, results_dir: str, version: str = "v1"):
     return all_experiments
 
 
+# ── Stability Experiment Runner ────────────────────────────────────────────────
+
+def run_stability_experiments(base_args, results_dir: str, n_seeds: int = 5,
+                              explicit_seeds: list = None):
+    """
+    Assess training stability by running the best config N times from scratch,
+    each with a different random seed.  Measures how much variance exists in
+    val accuracy, losses, and the train/val gap across independent runs.
+
+    Best config (hardcoded):
+        dynamic pairing  +  hard_negatives=True  +  hn_top_k=5
+        (same temperature / lr / epochs / pairs_per_intent as base_args)
+
+    Seeds used:
+        If explicit_seeds is provided → use those directly
+        Otherwise → base_args.seed, seed+1, ..., seed+(n_seeds-1)
+
+    Output layout:
+        models/stability/seed_N/     model.pt + tokenizer.json + config.json
+        results/stability/seed_N/    training_curves_*.png
+        results/stability/stability_summary.json
+        results/stability/stability_plot.png
+
+    Args:
+        base_args      : parsed argparse namespace (copied per run)
+        results_dir    : base results directory (e.g. "../results")
+        n_seeds        : number of runs when explicit_seeds is not provided
+        explicit_seeds : list of specific seed values to use (overrides n_seeds)
+    """
+    repo_root   = os.path.dirname(results_dir)
+    models_root = os.path.join(repo_root,   "models",  "stability")
+    plots_root  = os.path.join(results_dir, "stability")
+    os.makedirs(models_root, exist_ok=True)
+    os.makedirs(plots_root,  exist_ok=True)
+
+    if explicit_seeds:
+        seeds = explicit_seeds
+    else:
+        seeds = [base_args.seed + i for i in range(n_seeds)]
+
+    print(f"\n{'='*65}")
+    print(f"  STABILITY EXPERIMENT — {n_seeds} independent runs")
+    print(f"  Config : dynamic pairing + hard_negatives + hn_top_k=5")
+    print(f"  Seeds  : {seeds}")
+    print(f"  Models → {models_root}")
+    print(f"  Results→ {plots_root}")
+    print(f"{'='*65}")
+
+    all_runs = []
+
+    for seed in seeds:
+        print(f"\n{'─'*65}")
+        print(f"  RUN  seed={seed}  ({seeds.index(seed)+1}/{n_seeds})")
+        print(f"{'─'*65}")
+
+        run_args = copy.deepcopy(base_args)
+        run_args.seed             = seed
+        run_args.hard_negatives   = True
+        run_args.hn_top_k         = 5
+        run_args.static_pairing   = False          # dynamic pairing
+        run_args.experiment_label = f"seed_{seed}"
+
+        run_args.output_dir = os.path.join(models_root, f"seed_{seed}")
+        run_args.plot_dir   = os.path.join(plots_root,  f"seed_{seed}")
+
+        train(run_args)
+
+        config_path = os.path.join(run_args.output_dir, "config.json")
+        with open(config_path) as f:
+            saved = json.load(f)
+
+        history = saved["history"]
+        has_val = "val_loss" in history[0]
+
+        if has_val:
+            best_idx   = max(range(len(history)), key=lambda i: history[i]["val_accuracy"])
+            best_epoch = best_idx + 1
+            best_h     = history[best_idx]
+            best_val_acc  = best_h["val_accuracy"] * 100
+            best_val_loss = best_h["val_loss"]
+            train_loss    = best_h["loss"]
+            train_acc     = best_h["accuracy"] * 100
+            gap           = best_val_loss - train_loss
+        else:
+            best_idx      = max(range(len(history)), key=lambda i: history[i]["accuracy"])
+            best_epoch    = best_idx + 1
+            best_h        = history[best_idx]
+            best_val_acc  = best_h["accuracy"] * 100
+            best_val_loss = best_h["loss"]
+            train_loss    = best_h["loss"]
+            train_acc     = best_h["accuracy"] * 100
+            gap           = 0.0
+
+        all_runs.append({
+            "seed":        seed,
+            "best_epoch":  best_epoch,
+            "val_acc":     best_val_acc,
+            "train_loss":  train_loss,
+            "train_acc":   train_acc,
+            "val_loss":    best_val_loss,
+            "gap":         gap,
+            "history":     history,
+        })
+
+        print(f"  → seed={seed}  val_acc={best_val_acc:.1f}%  gap={gap:.3f}")
+
+    # ── summary stats ──────────────────────────────────────────────────────────
+    metrics = ["val_acc", "train_loss", "train_acc", "val_loss", "gap"]
+    stats   = {}
+    for m in metrics:
+        vals        = [r[m] for r in all_runs]
+        stats[m]    = {"mean": float(np.mean(vals)), "std": float(np.std(vals)),
+                       "min":  float(np.min(vals)),  "max": float(np.max(vals))}
+
+    print(f"\n{'='*65}")
+    print(f"  STABILITY SUMMARY  (n={n_seeds} seeds)")
+    print(f"{'='*65}")
+    print(f"  {'Seed':<8} | {'Val Acc':>8} | {'Train Loss':>10} | {'Train Acc':>10} | {'Val Loss':>9} | {'Gap':>7}")
+    print("  " + "─" * 61)
+    for r in all_runs:
+        print(f"  {r['seed']:<8} | {r['val_acc']:>7.1f}% | {r['train_loss']:>10.3f} | "
+              f"{r['train_acc']:>9.1f}% | {r['val_loss']:>9.3f} | {r['gap']:>7.3f}")
+    print("  " + "─" * 61)
+    print(f"  {'mean':<8} | {stats['val_acc']['mean']:>7.1f}% | {stats['train_loss']['mean']:>10.3f} | "
+          f"{stats['train_acc']['mean']:>9.1f}% | {stats['val_loss']['mean']:>9.3f} | {stats['gap']['mean']:>7.3f}")
+    print(f"  {'± std':<8} | {stats['val_acc']['std']:>7.2f}% | {stats['train_loss']['std']:>10.3f} | "
+          f"{stats['train_acc']['std']:>9.2f}% | {stats['val_loss']['std']:>9.3f} | {stats['gap']['std']:>7.3f}")
+    print(f"  {'range':<8} | {stats['val_acc']['min']:>6.1f}–{stats['val_acc']['max']:.1f}%")
+
+    # ── save summary JSON ──────────────────────────────────────────────────────
+    summary = {
+        "config": {
+            "dynamic_pairing": True,
+            "hard_negatives":  True,
+            "hn_top_k":        5,
+            "epochs":          base_args.epochs,
+            "temperature":     base_args.temperature,
+            "pairs_per_intent": base_args.pairs_per_intent,
+            "lr":              base_args.lr,
+            "n_seeds":         n_seeds,
+            "seeds":           seeds,
+        },
+        "runs":  all_runs,
+        "stats": stats,
+    }
+    summary_path = os.path.join(plots_root, "stability_summary.json")
+    with open(summary_path, "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"\n  Summary → {summary_path}")
+
+    # ── stability plot ─────────────────────────────────────────────────────────
+    _plot_stability(all_runs, stats, plots_root)
+
+    return summary
+
+
+def _plot_stability(all_runs, stats, plots_root):
+    """
+    Two-panel stability plot:
+      Left  — Val accuracy per seed (bar) + mean ± std band
+      Right — Val accuracy learning curves overlaid for all seeds
+    """
+    seeds     = [r["seed"] for r in all_runs]
+    val_accs  = [r["val_acc"] for r in all_runs]
+    mean_acc  = stats["val_acc"]["mean"]
+    std_acc   = stats["val_acc"]["std"]
+
+    colors = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6",
+              "#1abc9c", "#e67e22", "#34495e", "#e91e63", "#00bcd4"]
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+
+    # ── Left: bar chart of val acc per seed ───────────────────────────────────
+    ax = axes[0]
+    bars = ax.bar([str(s) for s in seeds], val_accs,
+                  color=[colors[i % len(colors)] for i in range(len(seeds))],
+                  alpha=0.85, edgecolor="white", linewidth=1.2)
+    ax.axhline(mean_acc, color="black", linewidth=1.5, linestyle="--", label=f"mean={mean_acc:.1f}%")
+    ax.axhspan(mean_acc - std_acc, mean_acc + std_acc, alpha=0.12, color="black", label=f"±1 std ({std_acc:.2f}%)")
+    for bar, val in zip(bars, val_accs):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.15,
+                f"{val:.1f}%", ha="center", va="bottom", fontsize=9, fontweight="bold")
+    ax.set_xlabel("Seed", fontsize=11)
+    ax.set_ylabel("Best Val Accuracy (%)", fontsize=11)
+    ax.set_title("Val Accuracy per Seed", fontsize=12, fontweight="bold")
+    ax.set_ylim(max(0, mean_acc - 5), min(100, mean_acc + 5))
+    ax.legend(fontsize=9)
+    ax.grid(axis="y", alpha=0.3)
+
+    # ── Right: learning curves overlaid ───────────────────────────────────────
+    ax2 = axes[1]
+    for i, run in enumerate(all_runs):
+        history = run["history"]
+        has_val = "val_accuracy" in history[0]
+        epochs  = list(range(1, len(history) + 1))
+        if has_val:
+            vals = [h["val_accuracy"] * 100 for h in history]
+        else:
+            vals = [h["accuracy"] * 100 for h in history]
+        ax2.plot(epochs, vals, color=colors[i % len(colors)], alpha=0.8,
+                 linewidth=1.8, label=f"seed {run['seed']}")
+
+    ax2.set_xlabel("Epoch", fontsize=11)
+    ax2.set_ylabel("Val Accuracy (%)", fontsize=11)
+    ax2.set_title("Val Accuracy Curves — All Seeds", fontsize=12, fontweight="bold")
+    ax2.legend(fontsize=9)
+    ax2.grid(alpha=0.3)
+
+    plt.suptitle(
+        f"Stability Analysis — Dynamic Pairing + HN k=5  (n={len(all_runs)} seeds)\n"
+        f"Mean={mean_acc:.1f}%  ±{std_acc:.2f}%  Range=[{stats['val_acc']['min']:.1f}–{stats['val_acc']['max']:.1f}%]",
+        fontsize=11, fontweight="bold"
+    )
+    plt.tight_layout()
+
+    out_path = os.path.join(plots_root, "stability_plot.png")
+    plt.savefig(out_path, dpi=130, bbox_inches="tight")
+    plt.close()
+    print(f"  Plot    → {out_path}")
+
+
 # ── Entry Point ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -1165,6 +1386,14 @@ if __name__ == "__main__":
     parser.add_argument("--static-pairing", action="store_true",
                         help="Use the same pairs every epoch instead of re-shuffling. "
                              "Default: dynamic (re-shuffle each epoch).")
+    parser.add_argument("--stability",     action="store_true",
+                        help="Run stability sweep: best config (dynamic+hn_k=5) "
+                             "repeated --n-seeds times with different seeds.")
+    parser.add_argument("--n-seeds",       type=int, default=5,
+                        help="Number of seeds to run in stability sweep (default: 5)")
+    parser.add_argument("--seeds",         type=int, nargs="+", default=None,
+                        help="Explicit seed list for stability sweep, e.g. --seeds 7 23 99 137 256. "
+                             "Overrides --seed and --n-seeds.")
 
     # ── hard negative mining args ──────────────────────────────
     parser.add_argument("--hard-negatives",   action="store_true",
@@ -1178,7 +1407,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.hn_experiments:
+    if args.stability:
+        # stability sweep: best config (dynamic + hn_k=5) × n_seeds
+        run_stability_experiments(args, args.results_dir, n_seeds=args.n_seeds,
+                                  explicit_seeds=args.seeds)
+    elif args.hn_experiments:
         # compare top_k = 0, 1, 3, 5 hard negatives
         run_hn_experiments(args, args.results_dir, version=args.exp_version)
     elif args.experiments:

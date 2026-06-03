@@ -1820,6 +1820,108 @@ the best indicator that it will generalise to new queries it has never seen.
 
 ---
 
+## Step 9 — Stability Analysis
+
+Training a neural network involves randomness at several levels: weight initialisation,
+pair sampling order, and mini-batch shuffling. A result that only holds for one lucky
+seed is not trustworthy. The stability sweep reruns the **best config** (dynamic pairing
++ HN k=5) from scratch with different seeds and measures how much the outcome varies.
+
+### What varies between runs
+
+| Source of randomness | Effect |
+|----------------------|--------|
+| Weight initialisation | Different starting point in loss landscape |
+| Dynamic pair seed | Different anchor/positive combinations each epoch |
+| HN mining order | Slightly different hard-negative assignments |
+| Batch shuffle | Different gradient directions per step |
+
+### Running the stability sweep
+
+```bash
+# 5 runs with consecutive seeds (default)
+python3 train.py --stability --n-seeds 5
+
+# 5 runs with explicit spread-out seeds
+python3 train.py --stability --seeds 7 23 99 137 256
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--stability` | off | Enable stability sweep mode |
+| `--n-seeds` | 5 | Number of runs (used when `--seeds` not set) |
+| `--seeds` | None | Explicit seed list — overrides `--seed` and `--n-seeds` |
+
+Output layout:
+```
+models/stability/seed_N/      model.pt + tokenizer.json + config.json
+results/stability/seed_N/     training_curves_seed_N.png
+results/stability/stability_summary.json
+results/stability/stability_plot.png
+```
+
+### Results — Sweep 1 (seeds 42–46, consecutive)
+
+| Seed | Val Acc | Train Loss | Train Acc | Val Loss | Gap |
+|------|:-------:|:----------:|:---------:|:--------:|:---:|
+| 42   | 70.5%   | 1.313      | 78.2%     | 1.378    | 0.065 |
+| 43   | 71.3%   | 1.256      | 78.7%     | 1.361    | 0.105 |
+| 44   | 71.9%   | 1.180      | 80.6%     | 1.322    | 0.142 |
+| 45   | 69.9%   | 1.297      | 78.0%     | 1.376    | 0.080 |
+| 46   | 71.5%   | 1.226      | 80.5%     | 1.275    | 0.049 |
+| **mean** | **71.0%** | **1.254** | **79.2%** | **1.343** | **0.088** |
+| **±std** | **±0.72%** | **±0.048** | **±1.12%** | **±0.039** | **±0.033** |
+
+### Results — Sweep 2 (seeds 7, 23, 99, 137, 256 — spread out)
+
+| Seed | Val Acc | Train Loss | Train Acc | Val Loss | Gap |
+|------|:-------:|:----------:|:---------:|:--------:|:---:|
+| 7    | 70.7%   | 1.230      | 79.9%     | 1.308    | 0.078 |
+| 23   | 71.6%   | 1.214      | 80.1%     | 1.253    | 0.038 |
+| 99   | 71.7%   | 1.242      | 80.3%     | 1.295    | 0.052 |
+| 137  | 71.1%   | 1.274      | 79.0%     | 1.348    | 0.074 |
+| 256  | 69.8%   | 1.320      | 78.4%     | 1.367    | 0.047 |
+| **mean** | **71.0%** | **1.256** | **79.5%** | **1.314** | **0.058** |
+| **±std** | **±0.69%** | **±0.038** | **±0.73%** | **±0.040** | **±0.016** |
+
+### Combined view — all 10 runs
+
+```
+Seed  | Val Acc |  Gap        Seed  | Val Acc |  Gap
+──────────────────────────   ──────────────────────────
+7     |  70.7%  | 0.078       42    |  70.5%  | 0.065
+23    |  71.6%  | 0.038       43    |  71.3%  | 0.105
+99    |  71.7%  | 0.052       44    |  71.9%  | 0.142
+137   |  71.1%  | 0.074       45    |  69.9%  | 0.080
+256   |  69.8%  | 0.047       46    |  71.5%  | 0.049
+─────────────────────────────────────────────────────
+Overall mean : 71.0%  ±0.70%   Range: [69.8 – 71.9%]
+```
+
+### Key findings from stability analysis
+
+**Finding 1 — The result is real, not a lucky seed**
+
+Both sweeps converge to **mean=71.0%** independently — one with consecutive seeds,
+one with seeds spread across 0–256. The training recipe is stable, not sensitive to
+initialisation.
+
+**Finding 2 — Variance is tight (±0.70%)**
+
+A ±0.7pp std on a 150-class problem means the worst run (69.8%) and the best run
+(71.9%) differ by only 2.1pp. For comparison, the gap between static and dynamic
+pairing is 4.6pp — so the signal from the training recipe is 6× larger than the noise
+from random seeds.
+
+**Finding 3 — Gap is consistently healthy across all seeds**
+
+Every single run finished with gap < 0.15 (healthy). No seed produced an overfit
+model. This confirms the result is robust, not coincidental.
+
+**Headline number to report: 71.0 ± 0.7% val accuracy (n=10 independent runs)**
+
+---
+
 ## Dependencies
 
 | Package | Role |
