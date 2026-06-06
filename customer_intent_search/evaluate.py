@@ -156,6 +156,70 @@ def build_corpus_and_queries(test_data: dict):
 
     return corpus_texts, corpus_labels, query_texts, query_labels
 
+
+def build_corpus_centroid(test_data: dict, model, tokenizer):
+    """
+    Select corpus representative per intent as the most-central query —
+    the one whose embedding is closest to the mean of all intent embeddings.
+
+    Why this is better than always picking query[0]:
+        query[0] is arbitrary — it might use unusual phrasing that makes it a
+        poor representative (e.g. "what are my coffers at" for `balance`).
+        The centroid query is the most *typical* phrasing for the intent, so
+        every incoming query has the best chance of matching it.
+
+    Algorithm:
+        1. Embed all test queries for intent i  →  E_i  shape (n_i, D)
+        2. Compute mean embedding               →  mu_i shape (D,)  (re-normalised)
+        3. Pick query j = argmax cosine(E_i[j], mu_i)
+        4. Use query j as corpus entry; all others become eval queries
+
+    Args:
+        test_data  : dict {intent_id: [query strings]}
+        model      : trained MiniIntentEmbedder in eval mode
+        tokenizer  : fitted SimpleTokenizer
+
+    Returns:
+        corpus_texts, corpus_labels, query_texts, query_labels
+    """
+    import numpy as np
+
+    corpus_texts  = []
+    corpus_labels = []
+    query_texts   = []
+    query_labels  = []
+
+    for intent_id, queries in test_data.items():
+        queries = list(queries)
+
+        # embed all queries for this intent
+        embs = embed_with_model(queries, model, tokenizer)          # (n_i, D)
+
+        # centroid = mean embedding, re-normalised to unit length
+        mu   = embs.mean(axis=0)
+        norm = np.linalg.norm(mu)
+        if norm > 0:
+            mu = mu / norm
+
+        # pick the query closest to the centroid
+        sims    = embs @ mu                                         # (n_i,)
+        best_i  = int(np.argmax(sims))
+
+        corpus_texts.append(queries[best_i])
+        corpus_labels.append(intent_id)
+
+        for i, q in enumerate(queries):
+            if i != best_i:
+                query_texts.append(q)
+                query_labels.append(intent_id)
+
+    print(f"\nRetrieval corpus (centroid selection):")
+    print(f"  Corpus size  : {len(corpus_texts):,} entries  (1 per intent — most central query)")
+    print(f"  Eval queries : {len(query_texts):,} queries")
+
+    return corpus_texts, corpus_labels, query_texts, query_labels
+
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import normalize
 
@@ -361,7 +425,7 @@ import matplotlib.pyplot as plt
 
 # ── Evaluation runner ──────────────────────────────────────────────────────────
 
-def run_evaluation(model_dir: str, results_dir: str):
+def run_evaluation(model_dir: str, results_dir: str, centroid_corpus: bool = False):
     """
     Full evaluation pipeline — loads model, runs all three baselines,
     prints comparison table, saves bar chart.
@@ -370,22 +434,33 @@ def run_evaluation(model_dir: str, results_dir: str):
         1. Random-init  — same architecture, no training (measures architecture alone)
         2. TF-IDF       — keyword overlap baseline (classic NLP baseline)
         3. Fine-tuned   — our trained model (what contrastive learning adds)
+
+    Args:
+        centroid_corpus : if True, select corpus entry per intent as the most-central
+                          query (closest to mean embedding) instead of always query[0].
     """
 
     print("=" * 60)
     print("  EVALUATION — MiniIntentEmbedder vs Baselines")
+    print(f"  Corpus mode : {'centroid (most-central query)' if centroid_corpus else 'fixed (query[0])'}")
     print("=" * 60)
 
     # ── Step 1: load data ──────────────────────────────────────────
     print("\nLoading dataset...")
     _, _, test_data = load_dataset()
 
-    corpus_texts, corpus_labels, query_texts, query_labels = \
-        build_corpus_and_queries(test_data)
-
     # ── Step 2: load fine-tuned model ─────────────────────────────
     print("\nLoading fine-tuned model...")
     finetuned_model, tokenizer, config = load_finetuned_model(model_dir)
+
+    # ── Build corpus (must happen after model load for centroid mode) ──
+    if centroid_corpus:
+        print("\nBuilding centroid corpus (embedding all test queries per intent)...")
+        corpus_texts, corpus_labels, query_texts, query_labels = \
+            build_corpus_centroid(test_data, finetuned_model, tokenizer)
+    else:
+        corpus_texts, corpus_labels, query_texts, query_labels = \
+            build_corpus_and_queries(test_data)
 
     # ── Step 3: build random-init model ───────────────────────────
     # same architecture + same tokenizer, but weights never updated
@@ -559,8 +634,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Evaluate MiniIntentEmbedder")
-    parser.add_argument("--model-dir",    type=str, default="../models/finetuned")
-    parser.add_argument("--results-dir",  type=str, default="../results")
+    parser.add_argument("--model-dir",       type=str, default="../models/finetuned")
+    parser.add_argument("--results-dir",     type=str, default="../results")
+    parser.add_argument("--centroid-corpus", action="store_true",
+                        help="Select corpus entry per intent as the most-central query "
+                             "(closest to mean embedding) instead of always query[0].")
     args = parser.parse_args()
 
-    run_evaluation(args.model_dir, args.results_dir)
+    run_evaluation(args.model_dir, args.results_dir,
+                   centroid_corpus=args.centroid_corpus)

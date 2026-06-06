@@ -18,6 +18,68 @@ from model import build_model
 from data_preparation import load_dataset, create_training_pairs, IntentAwareBatchSampler
 
 
+# ── Sibling Intent Groups ──────────────────────────────────────────────────────
+# Intents within the same group share nearly identical vocabulary but have
+# distinct meanings. Standard in-batch negatives rarely co-occur, so the model
+# never learns to separate them. Sibling-aware HN injects at least one query
+# from each sibling per anchor — forcing the model to learn the distinction.
+#
+# Groups are derived from failure analysis (Step 12):
+#   - Read vs Write  : calendar/calendar_update, reminder/reminder_update, etc.
+#   - Check vs Act   : credit_score/improve_credit_score, pay_bill/bill_due
+#   - Shared topic   : recipe/ingredients_list, shopping_list/todo_list variants
+#   - Pronoun trap   : user_name/change_user_name/what_is_your_name
+#   - Surface trap   : yes/no/maybe
+
+CLINC_SIBLING_GROUPS = [
+    ["balance", "pto_balance", "rewards_balance"],
+    ["calendar", "calendar_update"],
+    ["reminder", "reminder_update"],
+    ["pay_bill", "bill_due", "min_payment", "bill_balance"],
+    ["credit_score", "improve_credit_score"],
+    ["shopping_list", "shopping_list_update", "todo_list", "todo_list_update"],
+    ["recipe", "ingredients_list", "ingredient_substitution"],
+    ["user_name", "change_user_name", "what_is_your_name"],
+    ["yes", "no", "maybe"],
+    ["order", "order_status", "cancel_order"],
+    ["gas", "gas_type"],
+]
+
+
+def build_sibling_map(intent_groups: dict, intent_name_to_id: dict) -> dict:
+    """
+    Build a mapping {intent_id: [sibling_intent_id, ...]} from CLINC_SIBLING_GROUPS.
+
+    Only includes intents that are present in intent_groups (training data).
+    Intents not listed in any sibling group are excluded — they have no known
+    sibling confusion problem and don't need special treatment.
+
+    Args:
+        intent_groups      : dict {intent_id: [query strings]} — training set
+        intent_name_to_id  : dict {intent_name: intent_id}
+
+    Returns:
+        dict {intent_id: [list of sibling intent_ids]}
+    """
+    present_ids = set(intent_groups.keys())
+    sibling_map = {}
+
+    for group in CLINC_SIBLING_GROUPS:
+        # resolve names → ids, keep only those present in training data
+        group_ids = [intent_name_to_id[n] for n in group
+                     if n in intent_name_to_id and intent_name_to_id[n] in present_ids]
+        if len(group_ids) < 2:
+            continue
+        # each intent in the group gets all others as siblings
+        for iid in group_ids:
+            sibling_map[iid] = [s for s in group_ids if s != iid]
+
+    n_intents = sum(1 for iid in sibling_map if sibling_map[iid])
+    print(f"  [Sibling HN] {n_intents} intents have sibling groups: "
+          + ", ".join(str(k) for k in sorted(sibling_map.keys())[:5]) + " ...")
+    return sibling_map
+
+
 # ── Loss Function ──────────────────────────────────────────────────────────────
 
 class MultipleNegativesRankingLoss(nn.Module):
@@ -151,7 +213,8 @@ def make_collate_fn(tokenizer, hard_neg_map=None, hn_top_k=1):
 
 # ── Hard Negative Mining ───────────────────────────────────────────────────────
 
-def mine_hard_negatives(model, tokenizer, intent_groups, top_k=1, device="cpu"):
+def mine_hard_negatives(model, tokenizer, intent_groups, top_k=1, device="cpu",
+                        sibling_map=None):
     """
     Offline hard negative mining: embed all training queries with the current
     model weights and find the top-K most similar queries from a *different* intent.
@@ -171,16 +234,26 @@ def mine_hard_negatives(model, tokenizer, intent_groups, top_k=1, device="cpu"):
                add them to that intent's hard-neg pool
         4. repeat every hn_refresh_every epochs as the model improves
 
+    Sibling-aware extension (when sibling_map is provided):
+        For each intent with known sibling confusion (e.g. calendar vs
+        calendar_update), also inject one random query per sibling into the
+        hard-neg pool regardless of embedding similarity. This guarantees the
+        model always sees the hardest known confusable pair during training,
+        even before embeddings have converged enough to surface them via
+        similarity mining.
+
     Args:
         model         : MiniIntentEmbedder (current weights)
         tokenizer     : fitted SimpleTokenizer
         intent_groups : dict {intent_id: [query strings]} — the training set
         top_k         : how many hard negatives to mine per query
         device        : "cpu" or "cuda"
+        sibling_map   : dict {intent_id: [sibling_intent_ids]} — optional;
+                        built by build_sibling_map()
 
     Returns:
         dict {intent_id: [list of hard negative text strings]}
-        Pool size per intent = top_k * n_queries_for_that_intent.
+        Pool size per intent = top_k * n_queries + sibling injections.
         The collate_fn samples randomly from this pool each batch.
     """
     all_texts, all_labels = [], []
@@ -204,6 +277,25 @@ def mine_hard_negatives(model, tokenizer, intent_groups, top_k=1, device="cpu"):
         top_idx = np.argsort(-scores)[:top_k]
         for idx in top_idx:
             hard_negs[label].append(all_texts[idx])
+
+    # ── sibling injection ──────────────────────────────────────────────────────
+    # For each sibling group, inject a random sample of each sibling's queries
+    # into the hard-neg pool. Pool size injected = n_sibling_queries // 2 each.
+    if sibling_map:
+        n_injected = 0
+        for intent_id, sibling_ids in sibling_map.items():
+            if intent_id not in intent_groups:
+                continue
+            for sib_id in sibling_ids:
+                if sib_id not in intent_groups:
+                    continue
+                sib_queries = intent_groups[sib_id]
+                # inject half the sibling's queries (minimum 5)
+                n_inject = max(5, len(sib_queries) // 2)
+                sample   = random.sample(sib_queries, min(n_inject, len(sib_queries)))
+                hard_negs[intent_id].extend(sample)
+                n_injected += len(sample)
+        print(f"    [Sibling HN] Injected {n_injected} sibling queries into hard-neg pools")
 
     return dict(hard_negs)
 
@@ -827,17 +919,28 @@ def train(args) -> tuple:
     loss_fn     = MultipleNegativesRankingLoss(temperature=args.temperature)
 
     # ── Step 6: Training loop ──────────────────────────────────
-    use_hn     = getattr(args, 'hard_negatives', False)
-    hn_top_k   = getattr(args, 'hn_top_k', 1)
-    hn_start   = getattr(args, 'hn_start_epoch', 4)
-    hn_refresh = getattr(args, 'hn_refresh_every', 3)
+    use_hn      = getattr(args, 'hard_negatives', False)
+    hn_top_k    = getattr(args, 'hn_top_k', 1)
+    hn_start    = getattr(args, 'hn_start_epoch', 4)
+    hn_refresh  = getattr(args, 'hn_refresh_every', 3)
+    use_sibling = getattr(args, 'sibling_hn', False)
 
     hard_neg_map = None   # starts None — enabled after warm-up
+
+    # build sibling map once (only needs intent names → ids, no embeddings)
+    sibling_map = None
+    if use_hn and use_sibling:
+        from datasets import load_dataset as hf_load
+        ds = hf_load("clinc/clinc_oos", "small")
+        label_names    = ds["train"].features["intent"].names
+        name_to_id     = {n: i for i, n in enumerate(label_names)}
+        sibling_map    = build_sibling_map(train_data, name_to_id)
 
     print(f"\nTraining for {args.epochs} epochs...")
     if use_hn:
         print(f"  Hard negatives: top_k={hn_top_k}, "
-              f"start_epoch={hn_start}, refresh_every={hn_refresh}")
+              f"start_epoch={hn_start}, refresh_every={hn_refresh}"
+              + (f", sibling_hn=True" if use_sibling else ""))
     print(f"  {'Epoch':>5} | {'train_loss':>10} | {'train_acc':>9} | "
           f"{'val_loss':>8} | {'val_acc':>7} | {'time':>6}")
     print("  " + "─" * 65)
@@ -859,9 +962,11 @@ def train(args) -> tuple:
 
         # mine hard negatives at configured intervals (after warm-up)
         if use_hn and epoch >= hn_start and (epoch - hn_start) % hn_refresh == 0:
-            print(f"  [HN] Mining hard negatives (top_k={hn_top_k})...")
+            print(f"  [HN] Mining hard negatives (top_k={hn_top_k}"
+                  + (", +siblings" if use_sibling else "") + ")...")
             hard_neg_map = mine_hard_negatives(
-                model, tokenizer, train_data, top_k=hn_top_k, device=device
+                model, tokenizer, train_data, top_k=hn_top_k, device=device,
+                sibling_map=sibling_map,
             )
 
         # rebuild DataLoader each epoch — collate_fn may carry updated hard_neg_map
@@ -1394,6 +1499,10 @@ if __name__ == "__main__":
     parser.add_argument("--seeds",         type=int, nargs="+", default=None,
                         help="Explicit seed list for stability sweep, e.g. --seeds 7 23 99 137 256. "
                              "Overrides --seed and --n-seeds.")
+    parser.add_argument("--sibling-hn",    action="store_true",
+                        help="Inject known sibling-intent queries into hard-neg pools "
+                             "during mining, in addition to similarity-mined negatives. "
+                             "Requires --hard-negatives. See CLINC_SIBLING_GROUPS.")
 
     # ── hard negative mining args ──────────────────────────────
     parser.add_argument("--hard-negatives",   action="store_true",

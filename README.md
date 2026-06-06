@@ -64,6 +64,11 @@ This repo is built **step by step**. You can clone it, follow each step in order
   - [Failure pattern summary](#failure-pattern-summary)
   - [Results across corpus splits](#results-across-corpus-splits)
   - [Key findings from eval stability](#key-findings-from-eval-stability)
+- [Step 13 — Improvements: Sibling HN + Centroid Corpus](#step-13--improvements-sibling-hn--centroid-corpus)
+  - [Improvement 1: Centroid corpus selection](#improvement-1-centroid-corpus-selection)
+  - [Improvement 2: Sibling-aware hard negatives](#improvement-2-sibling-aware-hard-negatives)
+  - [Running the improved training](#running-the-improved-training)
+  - [Results — v3 vs v2](#results--v3-vs-v2)
 - [Dependencies](#dependencies)
 
 ---
@@ -2409,6 +2414,114 @@ TF-IDF relies on exact keyword overlap, which is less sensitive to *which specif
 phrasing* is the corpus representative — all phrasings of the same intent share
 mostly the same keywords. The embedding model is more expressive but therefore
 more affected by the exact choice of reference sentence.
+
+---
+
+## Step 13 — Improvements: Sibling HN + Centroid Corpus
+
+The failure analysis (Step 12) revealed two distinct problems with different fixes:
+
+| Problem | Affected intents | Fix |
+|---------|-----------------|-----|
+| Bad corpus entry | `balance`, `calendar` | **Centroid corpus** — pick most-central query instead of query[0] |
+| Sibling intent confusion | 7 of top-10 failures | **Sibling-aware HN** — inject known sibling queries into hard-neg pools |
+
+Both improvements are independent and stack on top of the existing best config
+(dynamic pairing + hn_k=5).
+
+### Improvement 1: Centroid corpus selection
+
+**Problem:** `build_corpus_and_queries()` always picks `query[0]` per intent as the
+corpus representative. This is arbitrary — `balance` got "what are my coffers at"
+(archaic slang), giving the model zero vocabulary bridge to normal queries like
+"what's my bank account balance".
+
+**Fix:** `build_corpus_centroid()` in `evaluate.py`:
+1. Embed **all** test queries for an intent → matrix `E` shape `(n, 128)`
+2. Compute centroid `mu = mean(E)`, re-normalise to unit length
+3. Pick the query with highest cosine similarity to `mu` → most-typical phrasing
+4. Use that as the corpus entry; all others become eval queries
+
+This requires the model to be loaded first (centroid selection is model-dependent),
+but needs **no retraining** — it is purely an evaluation improvement.
+
+```bash
+# evaluate with centroid corpus
+python3 evaluate.py --model-dir ../models/stability/seed_44 --centroid-corpus
+
+# batch evaluate all checkpoints with centroid corpus
+python3 batch_evaluate.py  # centroid support can be added via --centroid-corpus flag
+```
+
+**Why centroid is model-dependent:**
+The "most central" query changes depending on the embedding model. A randomly
+initialised model would pick a different representative than a trained one. Always
+use the trained model's embeddings when selecting the centroid.
+
+### Improvement 2: Sibling-aware hard negatives
+
+**Problem:** Standard hard negative mining finds the globally most-similar
+cross-intent queries. But known sibling pairs (e.g. `pay_bill` vs `reminder_update`)
+may not surface via similarity until embeddings are already well-separated — which
+is too late. The model never learns to distinguish them during the critical early
+epochs.
+
+**Fix:** `CLINC_SIBLING_GROUPS` + `sibling_map` injected into `mine_hard_negatives()`:
+
+```python
+CLINC_SIBLING_GROUPS = [
+    ["balance", "pto_balance", "rewards_balance"],
+    ["calendar", "calendar_update"],
+    ["reminder", "reminder_update"],
+    ["pay_bill", "bill_due", "min_payment", "bill_balance"],
+    ["credit_score", "improve_credit_score"],
+    ["shopping_list", "shopping_list_update", "todo_list", "todo_list_update"],
+    ["recipe", "ingredients_list", "ingredient_substitution"],
+    ["user_name", "change_user_name", "what_is_your_name"],
+    ["yes", "no", "maybe"],
+    ["order", "order_status", "cancel_order"],
+    ["gas", "gas_type"],
+]
+```
+
+For each anchor intent that has known siblings, `mine_hard_negatives()` now:
+1. Runs the standard top-k similarity mining (unchanged)
+2. **Additionally** injects `n_sibling_queries // 2` (min 5) random queries per
+   sibling into the hard-neg pool
+
+This guarantees that during every training step where HN is active, at least some
+sibling queries appear as negatives — even at epoch 4 before the model has learned
+to separate them.
+
+**When does standard mining pick up siblings on its own?**
+Only after embeddings are already close enough to surface as top-k. With sibling
+injection, the model is pushed from the start.
+
+### Running the improved training
+
+```bash
+# v3: dynamic + hn_k=5 + sibling-aware HN (recommended)
+python3 train.py --hn-experiments --hard-negatives --sibling-hn --exp-version v3
+
+# single run to test
+python3 train.py --hard-negatives --hn-top-k 5 --sibling-hn \
+    --output-dir ../models/v3_test
+```
+
+| New flag | Description |
+|----------|-------------|
+| `--sibling-hn` | Inject sibling-intent queries into hard-neg pools alongside similarity-mined negatives. Requires `--hard-negatives`. |
+
+### Results — v3 vs v2
+
+> *(Results populated after training completes)*
+
+| Config | Val Acc | R@1 | R@5 | MRR | Gap |
+|--------|:-------:|:---:|:---:|:---:|:---:|
+| v2 dynamic hn_k=5 (baseline) | 70.5% | 69.4% | 87.4% | 77.5% | 0.141 |
+| v3 dynamic hn_k=5 + sibling | — | — | — | — | — |
+| v2 + centroid corpus (eval only) | — | — | — | — | — |
+| v3 + centroid corpus | — | — | — | — | — |
 
 ---
 
