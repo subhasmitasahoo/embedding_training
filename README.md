@@ -58,6 +58,10 @@ This repo is built **step by step**. You can clone it, follow each step in order
 - [Step 11 — Evaluation Metric Stability](#step-11--evaluation-metric-stability)
   - [The corpus-split problem](#the-corpus-split-problem)
   - [Running eval stability](#running-eval-stability)
+- [Step 12 — Failure Analysis](#step-12--failure-analysis)
+  - [Top 10 worst intents by R@1](#top-10-worst-intents-by-r1)
+  - [Failure details with top-5 retrieved](#failure-details-with-top-5-retrieved)
+  - [Failure pattern summary](#failure-pattern-summary)
   - [Results across corpus splits](#results-across-corpus-splits)
   - [Key findings from eval stability](#key-findings-from-eval-stability)
 - [Dependencies](#dependencies)
@@ -1938,6 +1942,283 @@ Every single run finished with gap < 0.15 (healthy). No seed produced an overfit
 model. This confirms the result is robust, not coincidental.
 
 **Headline number to report: 71.0 ± 0.7% val accuracy (n=10 independent runs)**
+
+---
+
+## Step 12 — Failure Analysis
+
+Understanding *where* the model fails is as important as the headline metric.
+This section shows the 10 worst intents by Recall@1, with example queries and the
+full top-5 retrieved results for each failure — revealing whether losses are due
+to bad corpus entries, sibling-intent confusion, or genuine model weakness.
+
+### Top 10 worst intents by R@1
+
+| # | Intent | R@1 | R@5 | Corpus entry | Root cause |
+|---|--------|:---:|:---:|-------------|-----------|
+| 1 | `balance` | 0% | 3% | "what are my **coffers** at" | ⚠️ Bad corpus entry (archaic slang) |
+| 2 | `expiration_date` | 0% | 28% | "i want to bring my card on the texas trip in june, will it be expired by then" | 🔀 Polysemy ("expires" = food + finance) |
+| 3 | `calendar` | 0% | 45% | "do i have my nephew's birthday marked for november 10th" | ⚠️ Bad corpus entry + sibling intent |
+| 4 | `pay_bill` | 0% | 21% | "i have a car payment that needs to be paid" | 🔁 Sibling intents (pay vs remind-to-pay vs bill-due) |
+| 5 | `reminder_update` | 3% | 10% | "i want to be reminded to pay the electric bill" | 🔁 Sibling intent (set vs retrieve reminder) |
+| 6 | `shopping_list_update` | 7% | 69% | "tack on a gallon of milk to the grocery list" | 🔁 Sibling intent (shopping vs todo list update) |
+| 7 | `recipe` | 10% | 69% | "what do i need to do to cook a chicken" | 🔁 Sibling intent (recipe steps vs ingredients) |
+| 8 | `user_name` | 14% | 97% | "how do you refer to me" | 🔁 Sibling intent (my name vs your name) |
+| 9 | `yes` | 14% | 69% | "i will say yes as my response" | 🪞 Surface trap ("that's right" near `no`) |
+| 10 | `improve_credit_score` | 17% | 90% | "how can i increase my credit score" | 🔁 Sibling intent (check vs improve score) |
+
+### Failure details with top-5 retrieved
+
+---
+
+#### #1 `balance` — R@1=0% R@5=3%
+**Corpus entry:** *"what are my coffers at"*
+> Nobody says "coffers". All queries say "bank account balance". Zero vocabulary bridge to the corpus entry.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "tell me the current balance of my bank accounts" | 1 | `pto_balance` | "i would like to know my vacation days balance" | 0.818 |
+| | 2 | `calendar` | "do i have my nephew's birthday marked for november 10th" | 0.680 |
+| | 3 | `pto_request_status` | "did my vacation get approval" | 0.678 |
+| | 4 | `income` | "how much money do i make" | 0.646 |
+| | 5 | `rewards_balance` | "x card has earned how many points" | 0.644 |
+| "what's my current bank account total" | 1 | `freeze_account` | "can you freeze my bank account" | 0.745 |
+| | 2 | `account_blocked` | "why is my bank account locked" | 0.667 |
+| | 3 | `interest_rate` | "what's my bank of america account getting in interest" | 0.628 |
+| | 4 | `pto_request_status` | "did my vacation get approval" | 0.596 |
+| | 5 | `routing` | "i need my routing number for my checking account at bb&t bank" | 0.582 |
+| "how much do i have in my bank accounts" | 1 | `pto_balance` | "i would like to know my vacation days balance" | 0.745 |
+| | 2 | `calendar` | "do i have my nephew's birthday marked for november 10th" | 0.698 |
+| | 3 | `income` | "how much money do i make" | 0.660 |
+| | 4 | `pto_request_status` | "did my vacation get approval" | 0.649 |
+| | 5 | `rewards_balance` | "x card has earned how many points" | 0.633 |
+
+---
+
+#### #2 `expiration_date` — R@1=0% R@5=28%
+**Corpus entry:** *"i want to bring my card on the texas trip in june, will it be expired by then"*
+> "expires" matches food context (`food_last`) and card replacement context equally. Corpus entry buries the signal in travel narrative.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "what's the month, year, and day that my card expires" | 1 | `food_last` | "how soon milk expires" | 0.632 |
+| | 2 | `replacement_card_duration` | "how long does it take for a credit card to be reissued and mailed to me" | 0.624 |
+| | 3 | `application_status` | "how is the status of my credit card application coming along" | 0.620 |
+| | 4 | `rewards_balance` | "x card has earned how many points" | 0.590 |
+| | 5 | `pto_used` | "how many days did i take off" | 0.556 |
+| "give me my credit card expiration date" | 1 | `replacement_card_duration` | "how long does it take for a credit card to be reissued and mailed to me" | 0.797 |
+| | 2 | `application_status` | "how is the status of my credit card application coming along" | 0.702 |
+| | 3 | `new_card` | "i would like to get a new credt card" | 0.659 |
+| | 4 | `rewards_balance` | "x card has earned how many points" | 0.620 |
+| | 5 | `food_last` | "how soon milk expires" | 0.618 |
+| "does my card have an expiration date and if so, what is it" | 1 | `replacement_card_duration` | "how long does it take for a credit card to be reissued and mailed to me" | 0.762 |
+| | 2 | `application_status` | "how is the status of my credit card application coming along" | 0.740 |
+| | 3 | `new_card` | "i would like to get a new credt card" | 0.683 |
+| | 4 | `food_last` | "how soon milk expires" | 0.628 |
+| | **5** | **`expiration_date` ✓** | **"i want to bring my card on the texas trip..."** | **0.618** |
+
+---
+
+#### #3 `calendar` — R@1=0% R@5=45%
+**Corpus entry:** *"do i have my nephew's birthday marked for november 10th"*
+> Corpus entry uses specific personal narrative. Queries about generic appointments map to `calendar_update`, `account_blocked`, `last_maintenance` instead.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "do i have any appoints set for my calendar april 3rd" | 1 | `calendar_update` | "i need to add something to my calendar for next tuesday" | 0.813 |
+| | 2 | `confirm_reservation` | "confirm my reservation for march 12 at 9:00 am" | 0.596 |
+| | 3 | `direct_deposit` | "how do i set up a direct deposit" | 0.558 |
+| | **4** | **`calendar` ✓** | **"do i have my nephew's birthday marked..."** | **0.532** |
+| | 5 | `schedule_maintenance` | "can you see if i can make an appointment to have my oil changed" | 0.525 |
+| "did i set march 10th as my doctor's appointment" | 1 | `account_blocked` | "why is my bank account locked" | 0.732 |
+| | 2 | `freeze_account` | "can you freeze my bank account" | 0.636 |
+| | 3 | `order_checks` | "can i get some more checkbooks sent to me, please" | 0.626 |
+| | 4 | `report_fraud` | "i want to report fraudulent activity on my navy federal card" | 0.618 |
+| | 5 | `schedule_maintenance` | "can you see if i can make an appointment to have my oil changed" | 0.601 |
+| "do i have any appointments on my calendar march 22nd" | 1 | `calendar_update` | "i need to add something to my calendar for next tuesday" | 0.719 |
+| | 2 | `confirm_reservation` | "confirm my reservation for march 12 at 9:00 am" | 0.659 |
+| | 3 | `balance` | "what are my coffers at" | 0.600 |
+| | **4** | **`calendar` ✓** | **"do i have my nephew's birthday marked..."** | **0.595** |
+| | 5 | `todo_list` | "what's on my todo list" | 0.504 |
+
+---
+
+#### #4 `pay_bill` — R@1=0% R@5=21%
+**Corpus entry:** *"i have a car payment that needs to be paid"*
+> "pay the [bill]" matches `reminder_update` ("reminded to pay the electric bill") at 0.87. Model can't distinguish act-of-paying from reminder-to-pay.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "i need to put in a payment towards my phone bill" | 1 | `reminder_update` | "i want to be reminded to pay the electric bill" | 0.873 |
+| | 2 | `min_payment` | "i must pay verizon what minimum amount on my bill" | 0.764 |
+| | 3 | `bill_due` | "when is my electric bill due by" | 0.712 |
+| | 4 | `sync_device` | "i want my phone to be disconnected from you" | 0.703 |
+| | 5 | `find_phone` | "can you help me find my phone, please" | 0.672 |
+| "pay my con edison bill using my capital one account" | 1 | `reminder_update` | "i want to be reminded to pay the electric bill" | 0.868 |
+| | 2 | `min_payment` | "i must pay verizon what minimum amount on my bill" | 0.773 |
+| | 3 | `bill_due` | "when is my electric bill due by" | 0.691 |
+| | 4 | `bill_balance` | "what do i owe to jcp" | 0.608 |
+| | 5 | `credit_score` | "i would like to know my credit score" | 0.594 |
+| "help me get my gas bill paid" | 1 | `bill_due` | "when is my electric bill due by" | 0.828 |
+| | 2 | `min_payment` | "i must pay verizon what minimum amount on my bill" | 0.793 |
+| | **3** | **`pay_bill` ✓** | **"i have a car payment that needs to be paid"** | **0.765** |
+| | 4 | `bill_balance` | "what do i owe to jcp" | 0.679 |
+| | 5 | `balance` | "what are my coffers at" | 0.671 |
+
+---
+
+#### #5 `reminder_update` — R@1=3% R@5=10%
+**Corpus entry:** *"i want to be reminded to pay the electric bill"*
+> "don't forget to tell me to call my mother" → model reads "call my mother" and retrieves `make_call` at 0.948. The reminder framing ("don't forget") is lost.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "don't forget to tell me to call my mother" | 1 | `make_call` | "i need to call my dad" | 0.948 |
+| | 2 | `change_user_name` | "bob is my name now" | 0.832 |
+| | 3 | `sync_device` | "i want my phone to be disconnected from you" | 0.776 |
+| | 4 | `find_phone` | "can you help me find my phone, please" | 0.688 |
+| | 5 | `change_ai_name` | "would it be possible to change your name to coraline" | 0.684 |
+| "remind me to put gas in my car" | 1 | `gas` | "can i get to work on my fuel tank" | 0.763 |
+| | 2 | `gas_type` | "which gas would be best" | 0.715 |
+| | 3 | `balance` | "what are my coffers at" | 0.627 |
+| | 4 | `spending_history` | "what's the total i've spent on shoes this month" | 0.584 |
+| | 5 | `ingredient_substitution` | "can i swap chili for sloppy joe mix in the recipe" | 0.555 |
+| "set a reminder to buy bread" | 1 | `reminder` | "give me my reminders" | 0.741 |
+| | 2 | `damaged_card` | "tell me how to go about reporting a damaged card" | 0.546 |
+| | 3 | `bill_balance` | "what do i owe to jcp" | 0.545 |
+| | 4 | `income` | "how much money do i make" | 0.541 |
+| | **5** | **`reminder_update` ✓** | **"i want to be reminded to pay the electric bill"** | **0.505** |
+
+---
+
+#### #6 `shopping_list_update` — R@1=7% R@5=69%
+**Corpus entry:** *"tack on a gallon of milk to the grocery list"*
+> "add X to the list" is structurally identical to `todo_list_update`. The model can't tell shopping list from todo list without explicit keywords.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "add laundry detergent to the list" | 1 | `todo_list_update` | "cross grocery shopping off the todo list" | 0.836 |
+| | 2 | `shopping_list` | "does my shopping list have pop tarts" | 0.668 |
+| | 3 | `todo_list` | "what's on my todo list" | 0.634 |
+| | 4 | `reset_settings` | "so please reset your factory settings" | 0.629 |
+| | 5 | `update_playlist` | "add to my motivational playlist rap god" | 0.610 |
+| "make sure to put eggs on the grocery list" | **1** | **`shopping_list_update` ✓** | **"tack on a gallon of milk to the grocery list"** | **0.849** |
+| | 2 | `todo_list_update` | "cross grocery shopping off the todo list" | 0.816 |
+| | 3 | `todo_list` | "what's on my todo list" | 0.802 |
+| | 4 | `shopping_list` | "does my shopping list have pop tarts" | 0.771 |
+| | 5 | `order` | "alexa, buy a new television" | 0.556 |
+| "the list should also have 2 loaves of bread" | 1 | `shopping_list` | "does my shopping list have pop tarts" | 0.780 |
+| | 2 | `todo_list` | "what's on my todo list" | 0.753 |
+| | 3 | `todo_list_update` | "cross grocery shopping off the todo list" | 0.703 |
+| | **4** | **`shopping_list_update` ✓** | **"tack on a gallon of milk to the grocery list"** | **0.698** |
+| | 5 | `reminder` | "give me my reminders" | 0.605 |
+
+---
+
+#### #7 `recipe` — R@1=10% R@5=69%
+**Corpus entry:** *"what do i need to do to cook a chicken"*
+> "how do i make X" is nearly identical to `ingredients_list` ("what food do you need to make X"). Steps vs ingredients require understanding intent, not just words.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "how do i get started making homemade pizza dough" | 1 | `measurement_conversion` | "how many teaspoons will make one tablespoon" | 0.805 |
+| | 2 | `fun_fact` | "name unusual facts about the circus" | 0.706 |
+| | 3 | `nutrition_info` | "tell me nutritional info for brocoli" | 0.686 |
+| | **4** | **`recipe` ✓** | **"what do i need to do to cook a chicken"** | **0.649** |
+| | 5 | `income` | "how much money do i make" | 0.642 |
+| "what instructions do i need to bake a cake from scratch" | 1 | `ingredient_substitution` | "can i swap chili for sloppy joe mix in the recipe" | 0.794 |
+| | **2** | **`recipe` ✓** | **"what do i need to do to cook a chicken"** | **0.774** |
+| | 3 | `car_rental` | "i need to rent an suv in charlestown for the first week in june" | 0.689 |
+| | 4 | `income` | "how much money do i make" | 0.622 |
+| | 5 | `measurement_conversion` | "how many teaspoons will make one tablespoon" | 0.585 |
+| "how do i go about cooking a 10lb turkey" | **1** | **`recipe` ✓** | **"what do i need to do to cook a chicken"** | **0.758** |
+| | 2 | `measurement_conversion` | "how many teaspoons will make one tablespoon" | 0.745 |
+| | 3 | `travel_suggestion` | "what are some interesting things i can do while in raleigh" | 0.659 |
+| | 4 | `ingredient_substitution` | "can i swap chili for sloppy joe mix in the recipe" | 0.626 |
+| | 5 | `travel_alert` | "is there a travel alert in spain" | 0.578 |
+
+---
+
+#### #8 `user_name` — R@1=14% R@5=97%
+**Corpus entry:** *"how do you refer to me"*
+> High R@5 (97%) — model finds the right neighbourhood but ranks `change_user_name` and `what_is_your_name` above it. "my name" vs "your name" is a subtle pronoun distinction.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "call my name" | 1 | `change_user_name` | "bob is my name now" | 0.929 |
+| | 2 | `make_call` | "i need to call my dad" | 0.873 |
+| | **3** | **`user_name` ✓** | **"how do you refer to me"** | **0.762** |
+| | 4 | `what_is_your_name` | "tell me what your name is" | 0.714 |
+| | 5 | `find_phone` | "can you help me find my phone, please" | 0.687 |
+| "what do i go by" | 1 | `what_is_your_name` | "tell me what your name is" | 0.683 |
+| | 2 | `what_can_i_ask_you` | "can you tell me what you can help with" | 0.632 |
+| | 3 | `what_are_your_hobbies` | "what are your hobbies exactly" | 0.616 |
+| | **4** | **`user_name` ✓** | **"how do you refer to me"** | **0.607** |
+| | 5 | `who_made_you` | "what company made this ai" | 0.560 |
+| "say my name" | 1 | `change_user_name` | "bob is my name now" | 0.863 |
+| | 2 | `what_is_your_name` | "tell me what your name is" | 0.828 |
+| | **3** | **`user_name` ✓** | **"how do you refer to me"** | **0.785** |
+| | 4 | `repeat` | "may you say that again" | 0.731 |
+| | 5 | `make_call` | "i need to call my dad" | 0.680 |
+
+---
+
+#### #9 `yes` — R@1=14% R@5=69%
+**Corpus entry:** *"i will say yes as my response"*
+> "that's correct/right" → retrieved `no` ("that isn't right") because both share "that's [adjective]" structure. The model learned surface pattern, not semantic opposition.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "yes, ai, that is correct" | 1 | `no` | "that isn't right" | 0.794 |
+| | **2** | **`yes` ✓** | **"i will say yes as my response"** | **0.781** |
+| | 3 | `maybe` | "undecided" | 0.744 |
+| | 4 | `spelling` | "spell aaron" | 0.703 |
+| | 5 | `cancel` | "stop what you're doing" | 0.692 |
+| "my answer to your question is yes" | **1** | **`yes` ✓** | **"i will say yes as my response"** | **0.881** |
+| | 2 | `change_user_name` | "bob is my name now" | 0.734 |
+| | 3 | `repeat` | "may you say that again" | 0.708 |
+| | 4 | `cancel` | "stop what you're doing" | 0.665 |
+| | 5 | `what_is_your_name` | "tell me what your name is" | 0.654 |
+| "yes is my answer" | **1** | **`yes` ✓** | **"i will say yes as my response"** | **0.830** |
+| | 2 | `maybe` | "undecided" | 0.746 |
+| | 3 | `definition` | "define antebellum" | 0.636 |
+| | 4 | `date` | "date please" | 0.624 |
+| | 5 | `cancel` | "stop what you're doing" | 0.623 |
+
+---
+
+#### #10 `improve_credit_score` — R@1=17% R@5=90%
+**Corpus entry:** *"how can i increase my credit score"*
+> "how can i contribute/up/boost my credit score" → retrieved `credit_score` at 0.95. The model can't distinguish *checking* a score from *improving* it — both use identical vocabulary.
+
+| Query | Rank | Retrieved intent | Anchor query | Score |
+|-------|:----:|-----------------|-------------|:-----:|
+| "how can i contribute to my credit score" | 1 | `credit_score` | "i would like to know my credit score" | 0.953 |
+| | **2** | **`improve_credit_score` ✓** | **"how can i increase my credit score"** | **0.754** |
+| | 3 | `reminder_update` | "i want to be reminded to pay the electric bill" | 0.573 |
+| | 4 | `replacement_card_duration` | "how long does it take for a credit card to be reissued and mailed to me" | 0.484 |
+| | 5 | `apr` | "you need to tell me my credit card's apr" | 0.482 |
+| "how can i raise my credit score" | **1** | **`improve_credit_score` ✓** | **"how can i increase my credit score"** | **0.901** |
+| | 2 | `credit_score` | "i would like to know my credit score" | 0.835 |
+| | 3 | `freeze_account` | "can you freeze my bank account" | 0.564 |
+| | 4 | `transfer` | "can you please provide me with assistance in moving money from one account to another" | 0.563 |
+| | 5 | `reminder_update` | "i want to be reminded to pay the electric bill" | 0.481 |
+| "how is it possible to get a better credit score" | **1** | **`improve_credit_score` ✓** | **"how can i increase my credit score"** | **0.693** |
+| | 2 | `credit_score` | "i would like to know my credit score" | 0.642 |
+| | 3 | `new_card` | "i would like to get a new credt card" | 0.639 |
+| | 4 | `uber` | "i'd like an uber for 6 people, going to walmart" | 0.557 |
+| | 5 | `replacement_card_duration` | "how long does it take for a credit card to be reissued and mailed to me" | 0.554 |
+
+---
+
+### Failure pattern summary
+
+| Pattern | Affected intents | Fix |
+|---------|-----------------|-----|
+| ⚠️ **Bad corpus entry** | `balance` (#1), `calendar` (#3) | Better corpus representative — use most-central / average embedding query |
+| 🔁 **Read vs write / check vs act** | `calendar` vs `calendar_update`, `reminder` vs `reminder_update`, `credit_score` vs `improve_credit_score`, `pay_bill` vs `bill_due` | Intent-aware hard negatives — force sibling pairs to be negatives during training |
+| 🔀 **Polysemy** | `expiration_date` (#2), `reminder_update` (#5) | Augment training with in-context disambiguating examples |
+| 🪞 **Surface form trap** | `yes` (#9), `user_name` (#8) | Dedicated hard-negative pairs for near-identical surface / opposite-meaning queries |
 
 ---
 
