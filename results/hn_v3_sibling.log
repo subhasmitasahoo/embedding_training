@@ -1,0 +1,260 @@
+/Users/subha/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:271: RuntimeWarning: divide by zero encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:271: RuntimeWarning: overflow encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:271: RuntimeWarning: invalid value encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+
+  Version    : v3
+  Pairing    : dynamic
+  Models  →  ../models/hn_experiments/v3/dynamic
+  Results →  ../results/hn_experiments/v3/dynamic
+
+=================================================================
+  HN EXPERIMENT: no_hn  (top_k=0)
+=================================================================
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+
+Training for 15 epochs...
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0575 | train_acc 2.3% | val_loss 4.6351 | val_acc 14.8% | time 2.3s
+  Epoch 02 | train_loss 4.7282 | train_acc 5.0% | val_loss 3.9851 | val_acc 20.1% | time 2.3s
+  Epoch 03 | train_loss 4.0292 | train_acc 13.1% | val_loss 3.0793 | val_acc 33.7% | time 2.3s
+  Epoch 04 | train_loss 3.2125 | train_acc 25.5% | val_loss 2.4521 | val_acc 44.5% | time 2.3s
+  Epoch 05 | train_loss 2.5341 | train_acc 37.0% | val_loss 2.1197 | val_acc 50.3% | time 2.3s
+  Epoch 06 | train_loss 2.0784 | train_acc 45.7% | val_loss 1.8767 | val_acc 54.3% | time 2.3s
+  Epoch 07 | train_loss 1.6921 | train_acc 53.0% | val_loss 1.7202 | val_acc 58.7% | time 2.3s
+  Epoch 08 | train_loss 1.4570 | train_acc 58.7% | val_loss 1.6394 | val_acc 61.7% | time 2.3s
+  Epoch 09 | train_loss 1.2543 | train_acc 63.7% | val_loss 1.5491 | val_acc 63.9% | time 2.3s
+  Epoch 10 | train_loss 1.1189 | train_acc 66.9% | val_loss 1.4980 | val_acc 65.3% | time 2.3s
+  Epoch 11 | train_loss 1.0118 | train_acc 69.8% | val_loss 1.4556 | val_acc 67.5% | time 2.3s
+  Epoch 12 | train_loss 0.9066 | train_acc 73.2% | val_loss 1.4403 | val_acc 68.3% | time 2.3s
+  Epoch 13 | train_loss 0.8423 | train_acc 74.1% | val_loss 1.4148 | val_acc 68.9% | time 2.3s
+  Epoch 14 | train_loss 0.7812 | train_acc 75.5% | val_loss 1.3987 | val_acc 69.5% | time 2.3s
+  Epoch 15 | train_loss 0.7563 | train_acc 76.0% | val_loss 1.3871 | val_acc 69.6% | time 2.3s
+
+  Best val accuracy : 69.6% at epoch 15
+  Final loss gap    : 0.6308 (⚠ overfitting)
+  Plot      → ../results/hn_experiments/v3/dynamic/no_hn/training_curves_no_hn.png
+
+  Model     → ../models/hn_experiments/v3/dynamic/no_hn/model.pt
+  Tokenizer → ../models/hn_experiments/v3/dynamic/no_hn/tokenizer.json
+  Config    → ../models/hn_experiments/v3/dynamic/no_hn/config.json
+
+=================================================================
+  HN EXPERIMENT: hn_k=1  (top_k=1)
+=================================================================
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+  [Sibling HN] 30 intents have sibling groups: 8, 11, 16, 27, 28 ...
+
+Training for 15 epochs...
+  Hard negatives: top_k=1, start_epoch=4, refresh_every=3, sibling_hn=True
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0575 | train_acc 2.3% | val_loss 4.6351 | val_acc 14.8% | time 2.4s
+  Epoch 02 | train_loss 4.7282 | train_acc 5.0% | val_loss 3.9851 | val_acc 20.1% | time 2.4s
+  Epoch 03 | train_loss 4.0292 | train_acc 13.1% | val_loss 3.0793 | val_acc 33.7% | time 2.4s
+  [HN] Mining hard negatives (top_k=1, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 04 | train_loss 3.2799 | train_acc 25.3% | val_loss 2.4578 | val_acc 44.7% | time 3.7s
+  Epoch 05 | train_loss 2.7068 | train_acc 35.8% | val_loss 2.0962 | val_acc 51.3% | time 3.7s
+  Epoch 06 | train_loss 2.1924 | train_acc 46.1% | val_loss 1.8628 | val_acc 55.8% | time 3.7s
+  [HN] Mining hard negatives (top_k=1, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 07 | train_loss 1.9492 | train_acc 53.1% | val_loss 1.7107 | val_acc 59.7% | time 3.7s
+  Epoch 08 | train_loss 1.6867 | train_acc 59.3% | val_loss 1.6235 | val_acc 61.9% | time 3.7s
+  Epoch 09 | train_loss 1.4630 | train_acc 64.1% | val_loss 1.5342 | val_acc 64.1% | time 3.7s
+  [HN] Mining hard negatives (top_k=1, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 10 | train_loss 1.3173 | train_acc 68.1% | val_loss 1.4729 | val_acc 65.7% | time 3.7s
+  Epoch 11 | train_loss 1.2271 | train_acc 70.3% | val_loss 1.4354 | val_acc 67.4% | time 3.7s
+  Epoch 12 | train_loss 1.0955 | train_acc 73.0% | val_loss 1.4179 | val_acc 67.3% | time 3.7s
+  [HN] Mining hard negatives (top_k=1, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 13 | train_loss 1.0560 | train_acc 74.1% | val_loss 1.3990 | val_acc 68.6% | time 3.7s
+  Epoch 14 | train_loss 0.9858 | train_acc 77.0% | val_loss 1.3870 | val_acc 69.1% | time 3.6s
+  Epoch 15 | train_loss 0.9539 | train_acc 77.7% | val_loss 1.3756 | val_acc 68.8% | time 3.6s
+
+  Best val accuracy : 69.1% at epoch 14
+  Final loss gap    : 0.4216 (healthy)
+  Plot      → ../results/hn_experiments/v3/dynamic/hn_k_1/training_curves_hn_k=1.png
+
+  Model     → ../models/hn_experiments/v3/dynamic/hn_k_1/model.pt
+  Tokenizer → ../models/hn_experiments/v3/dynamic/hn_k_1/tokenizer.json
+  Config    → ../models/hn_experiments/v3/dynamic/hn_k_1/config.json
+
+=================================================================
+  HN EXPERIMENT: hn_k=3  (top_k=3)
+=================================================================
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+  [Sibling HN] 30 intents have sibling groups: 8, 11, 16, 27, 28 ...
+
+Training for 15 epochs...
+  Hard negatives: top_k=3, start_epoch=4, refresh_every=3, sibling_hn=True
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0575 | train_acc 2.3% | val_loss 4.6351 | val_acc 14.8% | time 2.4s
+  Epoch 02 | train_loss 4.7282 | train_acc 5.0% | val_loss 3.9851 | val_acc 20.1% | time 2.4s
+  Epoch 03 | train_loss 4.0292 | train_acc 13.1% | val_loss 3.0793 | val_acc 33.7% | time 2.4s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 04 | train_loss 3.4193 | train_acc 25.1% | val_loss 2.4674 | val_acc 44.5% | time 6.2s
+  Epoch 05 | train_loss 2.8246 | train_acc 37.1% | val_loss 2.1097 | val_acc 50.9% | time 6.1s
+  Epoch 06 | train_loss 2.3617 | train_acc 45.4% | val_loss 1.8498 | val_acc 55.9% | time 6.2s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 07 | train_loss 2.1853 | train_acc 52.7% | val_loss 1.6890 | val_acc 59.2% | time 6.0s
+  Epoch 08 | train_loss 1.9199 | train_acc 59.6% | val_loss 1.5975 | val_acc 62.9% | time 19.3s
+  Epoch 09 | train_loss 1.7004 | train_acc 63.7% | val_loss 1.5096 | val_acc 65.4% | time 94.7s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 10 | train_loss 1.5953 | train_acc 67.6% | val_loss 1.4411 | val_acc 66.7% | time 6.1s
+  Epoch 11 | train_loss 1.4522 | train_acc 71.7% | val_loss 1.4136 | val_acc 67.6% | time 6.2s
+  Epoch 12 | train_loss 1.3097 | train_acc 74.2% | val_loss 1.3963 | val_acc 68.3% | time 6.1s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 13 | train_loss 1.2866 | train_acc 75.1% | val_loss 1.3733 | val_acc 69.4% | time 6.0s
+  Epoch 14 | train_loss 1.1959 | train_acc 77.3% | val_loss 1.3500 | val_acc 69.8% | time 6.0s
+  Epoch 15 | train_loss 1.1345 | train_acc 79.1% | val_loss 1.3409 | val_acc 70.5% | time 6.0s
+
+  Best val accuracy : 70.5% at epoch 15
+  Final loss gap    : 0.2065 (healthy)
+  Plot      → ../results/hn_experiments/v3/dynamic/hn_k_3/training_curves_hn_k=3.png
+
+  Model     → ../models/hn_experiments/v3/dynamic/hn_k_3/model.pt
+  Tokenizer → ../models/hn_experiments/v3/dynamic/hn_k_3/tokenizer.json
+  Config    → ../models/hn_experiments/v3/dynamic/hn_k_3/config.json
+
+=================================================================
+  HN EXPERIMENT: hn_k=5  (top_k=5)
+=================================================================
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+  [Sibling HN] 30 intents have sibling groups: 8, 11, 16, 27, 28 ...
+
+Training for 15 epochs...
+  Hard negatives: top_k=5, start_epoch=4, refresh_every=3, sibling_hn=True
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.0575 | train_acc 2.3% | val_loss 4.6351 | val_acc 14.8% | time 2.5s
+  Epoch 02 | train_loss 4.7282 | train_acc 5.0% | val_loss 3.9851 | val_acc 20.1% | time 2.4s
+  Epoch 03 | train_loss 4.0292 | train_acc 13.1% | val_loss 3.0793 | val_acc 33.7% | time 2.3s
+  [HN] Mining hard negatives (top_k=5, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 04 | train_loss 3.4981 | train_acc 25.2% | val_loss 2.4829 | val_acc 44.1% | time 9.5s
+  Epoch 05 | train_loss 2.9830 | train_acc 35.7% | val_loss 2.0875 | val_acc 51.4% | time 9.2s
+  Epoch 06 | train_loss 2.4677 | train_acc 45.9% | val_loss 1.8253 | val_acc 56.5% | time 9.0s
+  [HN] Mining hard negatives (top_k=5, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 07 | train_loss 2.3761 | train_acc 52.5% | val_loss 1.6641 | val_acc 60.0% | time 8.8s
+  Epoch 08 | train_loss 2.0889 | train_acc 59.1% | val_loss 1.5970 | val_acc 61.8% | time 8.8s
+  Epoch 09 | train_loss 1.8418 | train_acc 65.1% | val_loss 1.5166 | val_acc 65.5% | time 8.7s
+  [HN] Mining hard negatives (top_k=5, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 10 | train_loss 1.7490 | train_acc 68.0% | val_loss 1.4466 | val_acc 66.5% | time 8.8s
+  Epoch 11 | train_loss 1.5831 | train_acc 71.8% | val_loss 1.4101 | val_acc 68.1% | time 9.0s
+  Epoch 12 | train_loss 1.4276 | train_acc 74.9% | val_loss 1.4077 | val_acc 69.1% | time 8.9s
+  [HN] Mining hard negatives (top_k=5, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 13 | train_loss 1.3878 | train_acc 75.8% | val_loss 1.3875 | val_acc 69.6% | time 8.7s
+  Epoch 14 | train_loss 1.3002 | train_acc 78.0% | val_loss 1.3755 | val_acc 70.2% | time 8.7s
+  Epoch 15 | train_loss 1.2177 | train_acc 80.5% | val_loss 1.3740 | val_acc 70.5% | time 8.7s
+
+  Best val accuracy : 70.5% at epoch 15
+  Final loss gap    : 0.1563 (healthy)
+  Plot      → ../results/hn_experiments/v3/dynamic/hn_k_5/training_curves_hn_k=5.png
+
+  Model     → ../models/hn_experiments/v3/dynamic/hn_k_5/model.pt
+  Tokenizer → ../models/hn_experiments/v3/dynamic/hn_k_5/tokenizer.json
+  Config    → ../models/hn_experiments/v3/dynamic/hn_k_5/config.json
+  HN comparison plot → ../results/hn_experiments/v3/dynamic/hn_comparison.png
+
+=================================================================
+  HN EXPERIMENT SUMMARY  [v3]
+=================================================================
+  Config       | Best Val Acc | Best Epoch | Final Val Loss
+  ───────────────────────────────────────────────────────
+  no_hn (dynamic) |        69.6% |         15 |         1.3871
+  hn_k=1 (dynamic) |        69.1% |         14 |         1.3756
+  hn_k=3 (dynamic) |        70.5% |         15 |         1.3409
+  hn_k=5 (dynamic) |        70.5% |         15 |         1.3740
+
+  Summary → ../results/hn_experiments/v3/dynamic/hn_summary.json
