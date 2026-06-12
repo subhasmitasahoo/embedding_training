@@ -157,6 +157,79 @@ def build_corpus_and_queries(test_data: dict):
     return corpus_texts, corpus_labels, query_texts, query_labels
 
 
+def build_corpus_multi_anchor(test_data: dict, model, tokenizer, k: int = 3):
+    """
+    Select the top-k most-central queries per intent as corpus anchors.
+
+    Why k anchors instead of 1:
+        With 1 anchor, the corpus entry might cover only one "style" of that
+        intent. For example, `order_status` might be asked as "where is my
+        package?" (delivery style) or "what is the status of order #1234?"
+        (reference-number style). A single anchor can only catch one style.
+        With k anchors we cover multiple phrasings, so any incoming query
+        finds a close match.
+
+    How it works:
+        1. Embed all test queries for this intent            → E  (n, D)
+        2. Compute centroid (mean embedding, normalised)      → mu (D,)
+        3. Rank all queries by cosine similarity to centroid  → sorted sims
+        4. Take the top-k as corpus anchors                  → k entries
+        5. All remaining queries go into the eval set
+
+    At retrieval time, nearest-neighbour search over all k*150 corpus entries
+    naturally finds the best-matching anchor. The intent label of that anchor
+    is the predicted intent. No special aggregation needed — the existing
+    retrieval_metrics() function works unchanged.
+
+    Args:
+        test_data : dict {intent_id: [query strings]}
+        model     : trained MiniIntentEmbedder in eval mode
+        tokenizer : fitted SimpleTokenizer
+        k         : number of anchors per intent (default 3)
+
+    Returns:
+        corpus_texts, corpus_labels, query_texts, query_labels
+        corpus now has k * n_intents entries instead of n_intents
+    """
+    import numpy as np
+
+    corpus_texts  = []
+    corpus_labels = []
+    query_texts   = []
+    query_labels  = []
+
+    for intent_id, queries in test_data.items():
+        queries = list(queries)
+
+        # embed all queries for this intent
+        embs = embed_with_model(queries, model, tokenizer)   # (n_i, D)
+
+        # centroid — same as build_corpus_centroid
+        mu   = embs.mean(axis=0)
+        norm = np.linalg.norm(mu)
+        if norm > 0:
+            mu = mu / norm
+
+        # rank by similarity to centroid, pick top-k
+        sims      = embs @ mu                                # (n_i,)
+        top_k_idx = set(np.argsort(-sims)[:k].tolist())     # top-k indices
+
+        for idx in sorted(top_k_idx):
+            corpus_texts.append(queries[idx])
+            corpus_labels.append(intent_id)
+
+        for i, q in enumerate(queries):
+            if i not in top_k_idx:
+                query_texts.append(q)
+                query_labels.append(intent_id)
+
+    print(f"\nRetrieval corpus (multi-anchor, k={k}):")
+    print(f"  Corpus size  : {len(corpus_texts):,} entries  ({k} per intent)")
+    print(f"  Eval queries : {len(query_texts):,} queries")
+
+    return corpus_texts, corpus_labels, query_texts, query_labels
+
+
 def build_corpus_centroid(test_data: dict, model, tokenizer):
     """
     Select corpus representative per intent as the most-central query —
@@ -420,12 +493,124 @@ def retrieval_metrics(
         "per_intent": per_intent,
     }
 
+def retrieval_metrics_intent_level(
+    query_vecs:    np.ndarray,   # (n_queries, dim)
+    corpus_vecs:   np.ndarray,   # (n_corpus, dim)
+    query_labels:  list,         # intent id for each query
+    corpus_labels: list,         # intent id for each corpus entry (may repeat for multi-anchor)
+) -> dict:
+    """
+    Multi-anchor-aware retrieval metrics.
+
+    Instead of ranking raw corpus entries, this function:
+        1. Computes similarity between each query and every corpus entry
+        2. Groups corpus entries by intent — takes the MAX similarity per intent
+        3. Ranks *intents* by their max anchor similarity
+        4. Computes Recall@1, Recall@5, MRR at the intent level
+
+    Why this matters for multi-anchor:
+        With k anchors per intent, a confusable wrong intent might have all k
+        of its anchors in the top-k+1 positions, pushing the correct intent out
+        of R@5. Aggregating by intent first (max-pooling) fixes this — each intent
+        gets exactly one score (its best anchor), then we rank intents fairly.
+
+    This function falls back to standard entry-level ranking when each intent
+    has exactly 1 corpus entry (equivalent to retrieval_metrics()).
+    """
+    # similarity matrix: (n_queries, n_corpus)
+    sim = np.dot(query_vecs, corpus_vecs.T)
+
+    # build list of unique intents in corpus and their indices
+    corpus_labels_arr = np.array(corpus_labels)
+    unique_intents    = list(dict.fromkeys(corpus_labels))  # preserve order, unique
+
+    # per-query results
+    per_query_correct_1 = []
+    per_query_correct_5 = []
+    per_query_rr        = []
+    per_query_intents   = []
+
+    for i, query_label in enumerate(query_labels):
+        q_sim = sim[i]   # (n_corpus,)
+
+        # for each unique corpus intent, take MAX similarity across its anchors
+        intent_scores = {}
+        for intent_id in unique_intents:
+            mask = corpus_labels_arr == intent_id
+            intent_scores[intent_id] = float(q_sim[mask].max())
+
+        # rank intents by their max-anchor similarity (descending)
+        ranked_intents = sorted(intent_scores, key=lambda x: -intent_scores[x])
+
+        # Recall@1
+        hit_1 = int(ranked_intents[0] == query_label)
+
+        # Recall@5
+        hit_5 = int(query_label in ranked_intents[:5])
+
+        # Reciprocal Rank
+        try:
+            rank = ranked_intents.index(query_label) + 1   # 1-indexed
+            rr   = 1.0 / rank
+        except ValueError:
+            rr = 0.0
+
+        per_query_correct_1.append(hit_1)
+        per_query_correct_5.append(hit_5)
+        per_query_rr.append(rr)
+        per_query_intents.append(query_label)
+
+    # micro averages
+    n_queries = len(query_labels)
+    micro = {
+        "recall_at_1": sum(per_query_correct_1) / n_queries,
+        "recall_at_5": sum(per_query_correct_5) / n_queries,
+        "mrr":         sum(per_query_rr)         / n_queries,
+    }
+
+    # per-intent breakdown
+    from collections import defaultdict
+    intent_correct_1 = defaultdict(list)
+    intent_correct_5 = defaultdict(list)
+    intent_rr        = defaultdict(list)
+
+    for hit1, hit5, rr, intent_id in zip(
+        per_query_correct_1, per_query_correct_5, per_query_rr, per_query_intents
+    ):
+        intent_correct_1[intent_id].append(hit1)
+        intent_correct_5[intent_id].append(hit5)
+        intent_rr[intent_id].append(rr)
+
+    per_intent = {}
+    for intent_id in sorted(intent_correct_1.keys()):
+        per_intent[intent_id] = {
+            "recall_at_1": sum(intent_correct_1[intent_id]) / len(intent_correct_1[intent_id]),
+            "recall_at_5": sum(intent_correct_5[intent_id]) / len(intent_correct_5[intent_id]),
+            "mrr":         sum(intent_rr[intent_id])         / len(intent_rr[intent_id]),
+            "n_queries":   len(intent_correct_1[intent_id]),
+        }
+
+    n_intents = len(per_intent)
+    macro = {
+        "recall_at_1": sum(v["recall_at_1"] for v in per_intent.values()) / n_intents,
+        "recall_at_5": sum(v["recall_at_5"] for v in per_intent.values()) / n_intents,
+        "mrr":         sum(v["mrr"]         for v in per_intent.values()) / n_intents,
+    }
+
+    return {
+        "micro":      micro,
+        "macro":      macro,
+        "per_intent": per_intent,
+    }
+
+
 import matplotlib.pyplot as plt
 
 
 # ── Evaluation runner ──────────────────────────────────────────────────────────
 
-def run_evaluation(model_dir: str, results_dir: str, centroid_corpus: bool = False):
+def run_evaluation(model_dir: str, results_dir: str, centroid_corpus: bool = False,
+                   multi_anchor: int = 0):
     """
     Full evaluation pipeline — loads model, runs all three baselines,
     prints comparison table, saves bar chart.
@@ -438,11 +623,20 @@ def run_evaluation(model_dir: str, results_dir: str, centroid_corpus: bool = Fal
     Args:
         centroid_corpus : if True, select corpus entry per intent as the most-central
                           query (closest to mean embedding) instead of always query[0].
+        multi_anchor    : if > 1, use this many anchors per intent (most-central k queries).
+                          Overrides centroid_corpus when set.
     """
+
+    if multi_anchor > 1:
+        corpus_mode = f"multi-anchor (k={multi_anchor} per intent)"
+    elif centroid_corpus:
+        corpus_mode = "centroid (most-central query)"
+    else:
+        corpus_mode = "fixed (query[0])"
 
     print("=" * 60)
     print("  EVALUATION — MiniIntentEmbedder vs Baselines")
-    print(f"  Corpus mode : {'centroid (most-central query)' if centroid_corpus else 'fixed (query[0])'}")
+    print(f"  Corpus mode : {corpus_mode}")
     print("=" * 60)
 
     # ── Step 1: load data ──────────────────────────────────────────
@@ -453,8 +647,12 @@ def run_evaluation(model_dir: str, results_dir: str, centroid_corpus: bool = Fal
     print("\nLoading fine-tuned model...")
     finetuned_model, tokenizer, config = load_finetuned_model(model_dir)
 
-    # ── Build corpus (must happen after model load for centroid mode) ──
-    if centroid_corpus:
+    # ── Build corpus (must happen after model load for centroid/multi-anchor mode) ──
+    if multi_anchor > 1:
+        print(f"\nBuilding multi-anchor corpus (k={multi_anchor}, embedding all test queries per intent)...")
+        corpus_texts, corpus_labels, query_texts, query_labels = \
+            build_corpus_multi_anchor(test_data, finetuned_model, tokenizer, k=multi_anchor)
+    elif centroid_corpus:
         print("\nBuilding centroid corpus (embedding all test queries per intent)...")
         corpus_texts, corpus_labels, query_texts, query_labels = \
             build_corpus_centroid(test_data, finetuned_model, tokenizer)
@@ -487,14 +685,18 @@ def run_evaluation(model_dir: str, results_dir: str, centroid_corpus: bool = Fal
     # ── Step 5: compute retrieval metrics for all three ────────────
     print("\nComputing retrieval metrics...")
 
+    # multi-anchor mode: rank *intents* by max-anchor similarity (not raw entries)
+    # this prevents a confusable intent's k anchors from monopolising top-k slots
+    metric_fn = retrieval_metrics_intent_level if multi_anchor > 1 else retrieval_metrics
+
     results = {}
-    results["Random-init"] = retrieval_metrics(
+    results["Random-init"] = metric_fn(
         random_queries, random_corpus, query_labels, corpus_labels
     )
-    results["TF-IDF"] = retrieval_metrics(
+    results["TF-IDF"] = metric_fn(
         tfidf_queries, tfidf_corpus, query_labels, corpus_labels
     )
-    results["Fine-tuned"] = retrieval_metrics(
+    results["Fine-tuned"] = metric_fn(
         ft_queries, ft_corpus, query_labels, corpus_labels
     )
 
@@ -639,7 +841,11 @@ if __name__ == "__main__":
     parser.add_argument("--centroid-corpus", action="store_true",
                         help="Select corpus entry per intent as the most-central query "
                              "(closest to mean embedding) instead of always query[0].")
+    parser.add_argument("--multi-anchor",   type=int, default=0,
+                        help="Use k most-central queries per intent as corpus anchors "
+                             "(e.g. --multi-anchor 3). Overrides --centroid-corpus when set.")
     args = parser.parse_args()
 
     run_evaluation(args.model_dir, args.results_dir,
-                   centroid_corpus=args.centroid_corpus)
+                   centroid_corpus=args.centroid_corpus,
+                   multi_anchor=args.multi_anchor)

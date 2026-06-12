@@ -1,0 +1,90 @@
+/Users/subha/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:271: RuntimeWarning: divide by zero encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:271: RuntimeWarning: overflow encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+/Users/subha/Documents/Model training/embedding_training/customer_intent_search/train.py:271: RuntimeWarning: invalid value encountered in matmul
+  sim = embeddings @ embeddings.T  # [N, N]
+  Device: cpu
+Loading e-commerce intent dataset...
+  Trying HuggingFace Hub...
+  Source  : HuggingFace Hub (clinc/clinc_oos)
+  Intents : 150
+  Train   : 7,500 queries
+  Val     : 3,000 queries
+  Test    : 4,500 queries
+
+  Adjusting batch size: 20 → 150 (= n_intents)
+
+Building tokenizer...
+  Vocab size: 3689
+
+Building model...
+  Parameters: 872,576
+
+  Pairs/epoch   : 3,750  (dynamic — re-shuffled each epoch)
+  Batches/epoch : 25
+  [Sibling HN] 30 intents have sibling groups: 8, 11, 16, 27, 28 ...
+
+Training for 30 epochs...
+  Hard negatives: top_k=3, start_epoch=4, refresh_every=3, sibling_hn=True
+  Epoch | train_loss | train_acc | val_loss | val_acc |   time
+  ─────────────────────────────────────────────────────────────────
+  Created 3,750 training pairs across 150 intents
+  Epoch 01 | train_loss 5.1130 | train_acc 2.4% | val_loss 4.6343 | val_acc 14.7% | time 2.7s
+  Epoch 02 | train_loss 4.7629 | train_acc 4.5% | val_loss 4.1604 | val_acc 18.4% | time 2.5s
+  Epoch 03 | train_loss 4.0789 | train_acc 12.8% | val_loss 3.1153 | val_acc 33.5% | time 2.5s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 04 | train_loss 3.3991 | train_acc 25.3% | val_loss 2.4259 | val_acc 44.5% | time 6.3s
+  Epoch 05 | train_loss 2.7165 | train_acc 39.2% | val_loss 1.9944 | val_acc 53.7% | time 6.3s
+  Epoch 06 | train_loss 2.2038 | train_acc 48.7% | val_loss 1.7275 | val_acc 60.2% | time 6.6s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 07 | train_loss 2.0226 | train_acc 58.7% | val_loss 1.5260 | val_acc 64.1% | time 6.1s
+  Epoch 08 | train_loss 1.6552 | train_acc 65.5% | val_loss 1.4208 | val_acc 67.6% | time 6.1s
+  Epoch 09 | train_loss 1.4147 | train_acc 71.2% | val_loss 1.3737 | val_acc 68.9% | time 6.3s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 10 | train_loss 1.2425 | train_acc 77.0% | val_loss 1.3233 | val_acc 71.4% | time 6.7s
+  Epoch 11 | train_loss 1.0867 | train_acc 79.6% | val_loss 1.3003 | val_acc 72.0% | time 6.8s
+  Epoch 12 | train_loss 0.9145 | train_acc 83.4% | val_loss 1.2970 | val_acc 73.2% | time 6.2s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 13 | train_loss 0.8702 | train_acc 85.1% | val_loss 1.2925 | val_acc 74.0% | time 6.2s
+  Epoch 14 | train_loss 0.7244 | train_acc 87.6% | val_loss 1.2709 | val_acc 74.4% | time 6.2s
+  Epoch 15 | train_loss 0.6521 | train_acc 88.3% | val_loss 1.2646 | val_acc 74.8% | time 6.2s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 16 | train_loss 0.5997 | train_acc 90.7% | val_loss 1.2799 | val_acc 74.5% | time 6.2s
+  Epoch 17 | train_loss 0.5082 | train_acc 91.8% | val_loss 1.2840 | val_acc 74.4% | time 6.2s
+  Epoch 18 | train_loss 0.4643 | train_acc 92.9% | val_loss 1.2837 | val_acc 74.9% | time 6.2s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 19 | train_loss 0.4452 | train_acc 93.6% | val_loss 1.2683 | val_acc 75.3% | time 6.3s
+  Epoch 20 | train_loss 0.3840 | train_acc 94.5% | val_loss 1.2708 | val_acc 75.3% | time 6.4s
+  Epoch 21 | train_loss 0.3494 | train_acc 94.7% | val_loss 1.2848 | val_acc 75.3% | time 6.7s
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 22 | train_loss 0.3347 | train_acc 95.5% | val_loss 1.2952 | val_acc 75.5% | time 6.7s
+  Epoch 23 | train_loss 0.2928 | train_acc 96.2% | val_loss 1.2957 | val_acc 76.0% | time 6.4s ⚠ overfit?
+  Epoch 24 | train_loss 0.2765 | train_acc 96.2% | val_loss 1.2991 | val_acc 76.2% | time 6.4s ⚠ overfit?
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 25 | train_loss 0.2758 | train_acc 96.6% | val_loss 1.2919 | val_acc 76.6% | time 6.2s ⚠ overfit?
+  Epoch 26 | train_loss 0.2580 | train_acc 96.6% | val_loss 1.2911 | val_acc 76.9% | time 6.1s ⚠ overfit?
+  Epoch 27 | train_loss 0.2444 | train_acc 96.7% | val_loss 1.2817 | val_acc 76.9% | time 6.1s ⚠ overfit?
+  [HN] Mining hard negatives (top_k=3, +siblings)...
+    [Sibling HN] Injected 1450 sibling queries into hard-neg pools
+  Epoch 28 | train_loss 0.2419 | train_acc 97.0% | val_loss 1.2783 | val_acc 76.8% | time 6.1s ⚠ overfit?
+  Epoch 29 | train_loss 0.2273 | train_acc 97.1% | val_loss 1.2891 | val_acc 76.7% | time 6.1s ⚠ overfit?
+  Epoch 30 | train_loss 0.2337 | train_acc 96.6% | val_loss 1.2929 | val_acc 76.8% | time 6.1s ⚠ overfit?
+
+  Best val accuracy : 76.9% at epoch 26
+  Final loss gap    : 1.0592 (⚠ overfitting)
+  Plot      → ../models/v4/dynamic_hn3_sib_e30/training_curves.png
+
+  Model     → ../models/v4/dynamic_hn3_sib_e30/model.pt
+  Tokenizer → ../models/v4/dynamic_hn3_sib_e30/tokenizer.json
+  Config    → ../models/v4/dynamic_hn3_sib_e30/config.json

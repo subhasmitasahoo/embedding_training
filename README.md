@@ -69,6 +69,10 @@ This repo is built **step by step**. You can clone it, follow each step in order
   - [Improvement 2: Sibling-aware hard negatives](#improvement-2-sibling-aware-hard-negatives)
   - [Running the improved training](#running-the-improved-training)
   - [Results — v3 vs v2](#results--v3-vs-v2)
+- [Step 14 — More Training Time + Multiple Anchors](#step-14--more-training-time--multiple-anchors)
+  - [Why we tried multiple anchors](#why-we-tried-multiple-anchors)
+  - [Why we tried more epochs](#why-we-tried-more-epochs)
+  - [Results — v4](#results--v4)
 - [Dependencies](#dependencies)
 
 ---
@@ -2561,6 +2565,144 @@ correct way to evaluate single-representative retrieval going forward.
 
 95% of all queries now find the correct intent in top-5. The remaining 5% are
 the hardest sibling cases where even the centroid embedding is ambiguous.
+
+---
+
+## Step 14 — More Training Time + Multiple Anchors
+
+After Step 13, our best result was **83.1% R@1** (v3 dynamic hn_k=3 + sibling HN +
+centroid corpus). We picked two more ideas to try next — one changes how we
+*evaluate*, the other changes how we *train*. Both are explained below in plain
+language: what we did, and why.
+
+### Why we tried multiple anchors
+
+**The idea in one sentence:** instead of giving each intent *one* "reference
+example" in our corpus, give it *three*.
+
+**Why this might help — in simple words:**
+
+Think of the corpus as a list of example sentences, one per intent, that we
+compare every new customer message against. With centroid corpus (Step 13) we
+already pick the *most typical* example sentence for each intent. But "most
+typical" is still just one sentence — and customers ask about the same thing
+in different ways.
+
+For example, for `order_status` a customer might say:
+- "where is my package?" (delivery-style wording)
+- "what's the status of order #1234?" (reference-number-style wording)
+
+One anchor sentence can only sound like one of these styles. If a new query
+sounds like the *other* style, it might end up closer to some other intent's
+anchor by accident. Giving each intent 3 anchor sentences — covering 3
+different typical styles — means a new query has more chances to land close
+to *some* anchor for the right intent.
+
+**How we picked the 3 anchors:**
+
+Same idea as centroid corpus, but instead of taking the single sentence
+closest to the "average meaning" of the intent, we take the **top 3 closest**
+sentences. These 3 become the corpus entries for that intent.
+
+**How retrieval changes:**
+
+A new query is compared against all anchors (now 450 instead of 150 — 3 per
+intent × 150 intents). For each intent, we look at its *best-matching* anchor
+only (the highest similarity among its 3). We then rank intents by that
+best-match score. This is important — without this step, an intent with 3
+anchors gets 3 "tickets" into the top-5 results, which can unfairly crowd out
+intents that only have 1 anchor close to the query.
+
+**No retraining needed** — this is purely an evaluation-time change. We reused
+the exact same v3 model from Step 13.
+
+### Why we tried more epochs
+
+**The idea in one sentence:** train the v3 model (sibling HN + hn_k=3) for
+longer — 30 epochs instead of 15 — and see if it keeps improving.
+
+**Why this might help — in simple words:**
+
+When we looked at the training charts from Step 9–13, the validation loss was
+still going *down* (and validation accuracy still going *up*) at epoch 15 —
+the point where we stopped. That's a sign the model hadn't finished learning
+yet; it was cut off mid-improvement.
+
+The sibling-aware hard negatives (Step 13) give the model a harder task: tell
+apart confusable intents like `calendar` vs `calendar_update`. Harder tasks
+usually need more time to "sink in." 15 epochs might simply not be enough time
+for that signal to fully reshape the embedding space. Doubling the training
+time gives the sibling signal more chances to separate those confusable
+clusters.
+
+**What we changed:**
+
+```bash
+python3 train.py --hard-negatives --hn-top-k 3 --sibling-hn \
+    --epochs 30 --temperature 0.05 --pairs-per-intent 25 --seed 44 \
+    --output-dir ../models/v4/dynamic_hn3_sib_e30 \
+    --results-dir ../results/v4
+```
+
+Everything else (temperature, pairs per intent, dynamic pairing, hard-negative
+schedule) is identical to the best v3 config — the only change is `--epochs 30`
+instead of `--epochs 15`.
+
+### Results — v4
+
+All rows below use the centroid corpus from Step 13 (the best evaluation setup so far),
+unless marked "multi-anchor".
+
+| Config | Corpus | R@1 | R@5 | MRR | Δ R@1 vs v3 |
+|--------|:------:|:---:|:---:|:---:|:-----------:|
+| v3 dynamic hn_k=3 +sibling (15 epochs) | centroid | 83.1% | 95.1% | 88.5% | baseline |
+| v3 dynamic hn_k=3 +sibling (15 epochs) | multi-anchor k=3 | 83.0% | 94.8% | 88.3% | −0.1pp |
+| **v4 dynamic hn_k=3 +sibling (30 epochs)** | **centroid** | **86.0%** | **95.0%** | **90.2%** | **+2.9pp ★** |
+| v4 dynamic hn_k=3 +sibling (30 epochs) | multi-anchor k=3 | 85.2% | 94.7% | 89.6% | +2.1pp |
+
+★ New best overall: **v4, 30 epochs, centroid corpus → R@1=86.0%, R@5=95.0%, MRR=90.2%**
+
+#### Key findings from Step 14
+
+**Finding 1 — More epochs gave the biggest single jump since centroid corpus**
+
+Training for 30 epochs instead of 15 lifted R@1 from 83.1% → 86.0% (+2.9pp) and
+MRR from 88.5% → 90.2% (+1.7pp). Validation accuracy kept climbing from 74.8%
+(epoch 15) to 76.9% (epoch 26) — confirming our hypothesis that 15 epochs cut
+training off too early. The sibling-aware hard negatives needed the extra time
+to actually reshape the embedding space.
+
+**Finding 2 — Overfitting shows up after epoch ~22, but doesn't hurt retrieval yet**
+
+From epoch 23 onward, the training log flags `⚠ overfit?` (val loss stops
+falling while train loss keeps dropping). The best validation accuracy was at
+epoch 26, not epoch 30 — so the model trained a little past its peak. Even so,
+the final checkpoint (epoch 30) still beat the 15-epoch v3 model by a wide
+margin on retrieval. A future run could add early stopping at ~epoch 26 to
+avoid the extra overfitting, but it's not yet hurting real-world retrieval
+quality.
+
+**Finding 3 — Multiple anchors did not help, on either model**
+
+For both v3 and v4, switching from 1 centroid anchor to 3 anchors per intent
+made R@1 and R@5 *slightly worse* (v4: 86.0% → 85.2% R@1). The intuition from
+Step 14's "why" section — that 3 anchors cover more phrasing styles — turned
+out not to matter much here: the single centroid anchor was already close
+enough to most queries, and the extra 2 anchors per intent mostly added noise
+(slightly more chances for a wrong intent's anchor to look similar). Multiple
+anchors may help more on a dataset with more diverse phrasing per intent, but
+for CLINC-150 it's not worth the extra corpus size.
+
+**Finding 4 — Training time was the highest-leverage remaining lever**
+
+Out of the two ideas tried in Step 14, "train longer" gave a real, measurable
+gain (+2.9pp R@1) for zero extra engineering — just a config change
+(`--epochs 30`). "More anchors" was free to try (no retraining) but didn't
+pay off. This suggests that for this model size and dataset, training budget
+still mattered more than evaluation-time tricks at this point — the opposite
+conclusion from Step 13, where the evaluation setup (centroid corpus) was the
+biggest lever. Both matter, but in different proportions depending on where
+the bottleneck currently is.
 
 ---
 
